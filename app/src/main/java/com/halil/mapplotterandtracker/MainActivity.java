@@ -1,9 +1,9 @@
 package com.halil.mapplotterandtracker;
 
 import android.Manifest;
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.drawable.Drawable;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -18,7 +18,6 @@ import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
-import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.widget.Toast;
 
@@ -35,6 +34,7 @@ import org.osmdroid.api.IMapController;
 import org.osmdroid.bonuspack.routing.OSRMRoadManager;
 import org.osmdroid.bonuspack.routing.Road;
 import org.osmdroid.bonuspack.routing.RoadManager;
+import org.osmdroid.bonuspack.routing.RoadNode;
 import org.osmdroid.config.Configuration;
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
 import org.osmdroid.util.GeoPoint;
@@ -51,30 +51,37 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Objects;
 
 public class MainActivity extends AppCompatActivity implements LocationListener, SensorEventListener {
 
-    private static final String MY_USER_AGENT = "Halil";
+    // Permissions
     private final String[] PERMISSIONS = {
             Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION,
             Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE};
-
     private static final int REQUEST_CODE_ASK_PERMISSIONS = 123;
-    private Polyline mPolyline;
+
+    // Binding
     ActivityMainBinding binding;
-    LocationManager locationManager;
-    RoadManager roadManager = new OSRMRoadManager(this, MY_USER_AGENT);
+
+    // Sensor
     SensorManager sensorManager;
     Sensor accelerometerSensor;
 
+    // Location
+    LocationManager locationManager;
+    RoadManager roadManager = new OSRMRoadManager(this, MY_USER_AGENT);
+    private static final String MY_USER_AGENT = "Halil007";
+
+    // MAP
     MapView mapViewOsm;
-    private CompassOverlay mCompassOverlay;
     private RotationGestureOverlay mRotationGestureOverlay;
     private ScaleBarOverlay mScaleBarOverlay;
     private MinimapOverlay mMinimapOverlay;
+    private Polyline mPolyline;
     ArrayList<GeoPoint> waypoints;
     Road road;
+    Marker nodeMarker;
+    RoadNode node;
 
     int timer = 0;
 
@@ -113,9 +120,9 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         mapController.setZoom(17.0);
 
         // Compass overlay;
-        this.mCompassOverlay = new CompassOverlay(this, new InternalCompassOrientationProvider(this), mapViewOsm);
-        this.mCompassOverlay.enableCompass();
-        mapViewOsm.getOverlays().add(this.mCompassOverlay);
+        CompassOverlay mCompassOverlay = new CompassOverlay(this, new InternalCompassOrientationProvider(this), mapViewOsm);
+        mCompassOverlay.enableCompass();
+        mapViewOsm.getOverlays().add(mCompassOverlay);
 
         // Permissions
         if (!hasPermissions(this, PERMISSIONS)) {
@@ -141,6 +148,9 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         // Set-up start and end points
         waypoints = new ArrayList<GeoPoint>();
         waypoints.add(startPoint);
+
+        // TODO add start and stop point. Than call a methot to draw tracking. drawTrackingline
+
         GeoPoint endPoint = new GeoPoint(59.950030, 11.014363); //midlertidig
         waypoints.add(endPoint);
 
@@ -165,13 +175,13 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         startMarker.setTitle("Start point");
 
         // Draw tracking line
-        drawPolyline();
+        drawTrackingline();
 
         // Refresh the map!
         mapViewOsm.invalidate();
     }
 
-    private void drawPolyline() {
+    private void drawTrackingline() {
         Thread thread = new Thread(() -> {
             try  {
                 // Road between points
@@ -182,6 +192,21 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
 
                 // Add this Polyline to the overlays to the map
                 mapViewOsm.getOverlays().add(roadOverlay);
+
+                Drawable nodeIcon = ResourcesCompat.getDrawable(getResources(), R.drawable.markernode, null);
+                for (int i=0; i<road.mNodes.size(); i++){
+                    node = road.mNodes.get(i);
+                    nodeMarker = new Marker(mapViewOsm);
+                    nodeMarker.setPosition(node.mLocation);
+                    nodeMarker.setIcon(nodeIcon);
+                    nodeMarker.setTitle("Step "+i);
+                    mapViewOsm.getOverlays().add(nodeMarker);
+
+                    nodeMarker.setSnippet(node.mInstructions);
+                    nodeMarker.setSubDescription(Road.getLengthDurationText(this, node.mLength, node.mDuration));
+                    Drawable icon = ResourcesCompat.getDrawable(getResources(), R.mipmap.continueicon, null);
+                    nodeMarker.setImage(icon);
+                }
 
             } catch (Exception e) {
                 e.printStackTrace();
