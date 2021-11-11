@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Map - A4 </string>
+    <string name="textview">TextView</string>
 </resources>

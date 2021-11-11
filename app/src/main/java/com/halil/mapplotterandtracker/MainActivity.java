@@ -19,6 +19,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -36,9 +37,11 @@ import org.osmdroid.bonuspack.routing.Road;
 import org.osmdroid.bonuspack.routing.RoadManager;
 import org.osmdroid.bonuspack.routing.RoadNode;
 import org.osmdroid.config.Configuration;
+import org.osmdroid.events.MapEventsReceiver;
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
+import org.osmdroid.views.overlay.MapEventsOverlay;
 import org.osmdroid.views.overlay.Marker;
 import org.osmdroid.views.overlay.MinimapOverlay;
 import org.osmdroid.views.overlay.Polyline;
@@ -52,7 +55,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-public class MainActivity extends AppCompatActivity implements LocationListener, SensorEventListener {
+public class MainActivity extends AppCompatActivity implements LocationListener, SensorEventListener, MapEventsReceiver {
 
     // Permissions
     private final String[] PERMISSIONS = {
@@ -62,10 +65,13 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
 
     // Binding
     ActivityMainBinding binding;
+    // Views
+    TextView tvAddress;
 
     // Sensor
     SensorManager sensorManager;
     Sensor accelerometerSensor;
+    Boolean accelerometerSensorChanged = false;
 
     // Location
     LocationManager locationManager;
@@ -74,6 +80,9 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
 
     // MAP
     MapView mapViewOsm;
+    MapEventsOverlay mMapEventsOverlay;
+    Polyline roadOverlay;
+    CompassOverlay mCompassOverlay;
     private RotationGestureOverlay mRotationGestureOverlay;
     private ScaleBarOverlay mScaleBarOverlay;
     private MinimapOverlay mMinimapOverlay;
@@ -82,6 +91,13 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     Road road;
     Marker nodeMarker;
     RoadNode node;
+    GeoPoint clickLocation;
+    GeoPoint currentPoint;
+    GeoPoint startPoint;
+    GeoPoint endPoint;
+    Marker currentMarker;
+    Marker startMarker;
+    Marker endMarker;
 
     int timer = 0;
 
@@ -93,6 +109,9 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         setContentView(binding.getRoot());
         Context ctx = getApplicationContext();
         Configuration.getInstance().load(ctx, PreferenceManager.getDefaultSharedPreferences(ctx));
+
+        //Init views
+        tvAddress = binding.tvAddress;
 
         // Toolbar
         Toolbar myToolbar = binding.myToolbar;
@@ -119,8 +138,12 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         IMapController mapController = mapViewOsm.getController();
         mapController.setZoom(17.0);
 
+        // Event overlay
+        mMapEventsOverlay = new MapEventsOverlay(this);
+        mapViewOsm.getOverlays().add(0, mMapEventsOverlay);
+
         // Compass overlay;
-        CompassOverlay mCompassOverlay = new CompassOverlay(this, new InternalCompassOrientationProvider(this), mapViewOsm);
+        mCompassOverlay = new CompassOverlay(this, new InternalCompassOrientationProvider(this), mapViewOsm);
         mCompassOverlay.enableCompass();
         mapViewOsm.getOverlays().add(mCompassOverlay);
 
@@ -128,34 +151,120 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         if (!hasPermissions(this, PERMISSIONS)) {
             ActivityCompat.requestPermissions(this, PERMISSIONS, 123);
         }
-
-        // Last location
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return;
         }
+
+        // Last location
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, this);
         Location location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
 
-        GeoPoint startPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
-        mapController.setCenter(startPoint);
-        double latitude = location.getLatitude();
-        double longitude = location.getLongitude();
-        LatLng currentPosition = new LatLng(latitude,longitude);
+        // Set-up start and end points
+        waypoints = new ArrayList<>();
 
         // Gangvei
         ((OSRMRoadManager)roadManager).setMean(OSRMRoadManager.MEAN_BY_FOOT);
 
-        // Set-up start and end points
-        waypoints = new ArrayList<GeoPoint>();
-        waypoints.add(startPoint);
+        // Current point
+        currentPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
+        mapController.setCenter(currentPoint);
+        double latitude = location.getLatitude();
+        double longitude = location.getLongitude();
+        LatLng currentPosition = new LatLng(latitude,longitude);
+        //waypoints.add(currentPoint);
 
-        // TODO add start and stop point. Than call a methot to draw tracking. drawTrackingline
-
-        GeoPoint endPoint = new GeoPoint(59.950030, 11.014363); //midlertidig
-        waypoints.add(endPoint);
-
+        // Initialize start marker and end marker
+        startMarker = new Marker(mapViewOsm);
+        endMarker = new Marker(mapViewOsm);
+        currentMarker = new Marker(mapViewOsm);
 
         Helper.Deg2UTM curUTM = new Helper.Deg2UTM(currentPosition.latitude,currentPosition.longitude);
+    }
+
+    @Override
+    public boolean longPressHelper(GeoPoint geoPoint) {
+        if (waypoints.size() == 2) {
+            waypoints.remove(startPoint);
+            waypoints.remove(endPoint);
+            // Remove all overlays
+            mapViewOsm.getOverlays().clear();
+            // Add event (click) listener and compas back
+            mapViewOsm.getOverlays().add(mMapEventsOverlay);
+            mapViewOsm.getOverlays().add(mCompassOverlay);
+
+            mapViewOsm.invalidate();
+        }
+        return false;
+    }
+
+    @Override
+    public boolean singleTapConfirmedHelper(GeoPoint point) {
+        clickLocation = new GeoPoint(point.getLatitude(), point.getLongitude());
+
+        if (waypoints.size() < 1) {
+            //waypoints.remove(startPoint);
+            startPoint = clickLocation;
+            waypoints.add(startPoint);
+
+            startMarker.setPosition(startPoint);
+            startMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
+            startMarker.setIcon(ResourcesCompat.getDrawable(getResources(), R.drawable.starticon, null));
+            startMarker.setTitle("Start point");
+            mapViewOsm.getOverlays().add(startMarker);
+            mapViewOsm.invalidate();
+
+        } else if (waypoints.size() == 1) {
+            //waypoints.remove(endPoint);
+            endPoint = clickLocation;
+            waypoints.add(endPoint);
+
+            endMarker.setPosition(endPoint);
+            endMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
+            endMarker.setIcon(ResourcesCompat.getDrawable(getResources(), R.drawable.endicon, null));
+            endMarker.setTitle("End point");
+            mapViewOsm.getOverlays().add(endMarker);
+
+            drawTrackingline();
+            mapViewOsm.invalidate();
+        }
+        return false;
+    }
+
+    private void drawTrackingline() {
+        Thread thread = new Thread(() -> {
+            if(waypoints.size() >= 2) {
+                try  {
+                    // Road between points
+                    road = roadManager.getRoad(waypoints);
+
+                    // Build a Polyline with the route shape
+                    roadOverlay = RoadManager.buildRoadOverlay(road);
+
+                    // Add this Polyline to the overlays to the map
+                    mapViewOsm.getOverlays().add(roadOverlay);
+
+                    // Adds nodes to the rode
+                    Drawable nodeIcon = ResourcesCompat.getDrawable(getResources(), R.drawable.markernode, null);
+                    for (int i=0; i<road.mNodes.size(); i++){
+                        node = road.mNodes.get(i);
+                        nodeMarker = new Marker(mapViewOsm);
+                        nodeMarker.setPosition(node.mLocation);
+                        nodeMarker.setIcon(nodeIcon);
+                        nodeMarker.setTitle("Step "+ i );
+                        mapViewOsm.getOverlays().add(nodeMarker);
+
+                        nodeMarker.setSnippet(node.mInstructions);
+                        nodeMarker.setSubDescription(Road.getLengthDurationText(this, node.mLength, node.mDuration));
+                        Drawable icon = ResourcesCompat.getDrawable(getResources(), R.mipmap.continueicon, null);
+                        nodeMarker.setImage(icon);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        thread.start();
     }
 
     @Override
@@ -163,56 +272,25 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
 
         String locinfo = getLocationInformation(location.getLatitude(),location.getLongitude());
         //Toast.makeText(this, locinfo, Toast.LENGTH_SHORT).show();
+        tvAddress.setText(locinfo);
 
-        GeoPoint startPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
+        //startPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
 
-        Marker startMarker = new Marker(mapViewOsm);
-        startMarker.setPosition(startPoint);
-        startMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
-        mapViewOsm.getOverlays().add(startMarker);
-
-        startMarker.setIcon(ResourcesCompat.getDrawable(getResources(), R.drawable.ic_baseline_location_on_24, null));
-        startMarker.setTitle("Start point");
+        currentMarker.setPosition(currentPoint);
+        currentMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
+        mapViewOsm.getOverlays().add(currentMarker);
+        currentMarker.setIcon(ResourcesCompat.getDrawable(getResources(), R.drawable.currentposicon, null));
+        currentMarker.setTitle("Your position");
 
         // Draw tracking line
-        drawTrackingline();
+        //drawTrackingline();
 
-        // Refresh the map!
-        mapViewOsm.invalidate();
-    }
-
-    private void drawTrackingline() {
-        Thread thread = new Thread(() -> {
-            try  {
-                // Road between points
-                road = roadManager.getRoad(waypoints);
-
-                // Build a Polyline with the route shape
-                Polyline roadOverlay = RoadManager.buildRoadOverlay(road);
-
-                // Add this Polyline to the overlays to the map
-                mapViewOsm.getOverlays().add(roadOverlay);
-
-                Drawable nodeIcon = ResourcesCompat.getDrawable(getResources(), R.drawable.markernode, null);
-                for (int i=0; i<road.mNodes.size(); i++){
-                    node = road.mNodes.get(i);
-                    nodeMarker = new Marker(mapViewOsm);
-                    nodeMarker.setPosition(node.mLocation);
-                    nodeMarker.setIcon(nodeIcon);
-                    nodeMarker.setTitle("Step "+i);
-                    mapViewOsm.getOverlays().add(nodeMarker);
-
-                    nodeMarker.setSnippet(node.mInstructions);
-                    nodeMarker.setSubDescription(Road.getLengthDurationText(this, node.mLength, node.mDuration));
-                    Drawable icon = ResourcesCompat.getDrawable(getResources(), R.mipmap.continueicon, null);
-                    nodeMarker.setImage(icon);
-                }
-
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        });
-        thread.start();
+        //if(accelerometerSensorChanged) {
+            // Refresh the map!
+            mapViewOsm.invalidate();
+        //}
+        // Reset boolean
+        //accelerometerSensorChanged = false;
     }
 
     private static boolean hasPermissions(Context context, String... perm){
@@ -250,7 +328,6 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
 
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
-
         timer++;
 
         if(sensorEvent.sensor.getType() == Sensor.TYPE_ACCELEROMETER && timer == 60) {
@@ -260,6 +337,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
 
             Log.d("LOCATIONTEST", "Accel changed " + Math.sqrt(cal));
 
+            accelerometerSensorChanged = true;
             timer = 0;
         }
     }
@@ -273,7 +351,12 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.menu_reset:
-                //newGame();
+//                for (Marker m : markers) {
+//                    mMapView.getOverlays().remove(m);
+//                    mMapView.invalidate();
+//                }
+//                mapViewOsm.getOverlays().removeAll();
+//                waypoints.remove(startPoint);
                 return true;
             case R.id.menu_start:
                 return true;
