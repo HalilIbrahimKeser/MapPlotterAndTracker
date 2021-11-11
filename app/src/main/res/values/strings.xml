@@ -1,4 +1,10 @@
 <resources>
     <string name="app_name">Map - A4 </string>
-    <string name="textview">TextView</string>
+    <string name="textview">Your current possition will appear here</string>
+    <string name="reset_map">Reset map</string>
+    <string name="slett">Slett</string>
+    <string name="string_slett" />
+    <string name="save_route">Save route</string>
+    <string name="showe_saved_routes">Showe saved routes</string>
+    <string name="exit">Exit</string>
 </resources>

@@ -1,8 +1,11 @@
 package com.halil.mapplotterandtracker;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
+import android.content.ClipData;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -65,6 +68,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
 
     // Binding
     ActivityMainBinding binding;
+
     // Views
     TextView tvAddress;
 
@@ -80,6 +84,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
 
     // MAP
     MapView mapViewOsm;
+    IMapController mapController;
     MapEventsOverlay mMapEventsOverlay;
     Polyline roadOverlay;
     CompassOverlay mCompassOverlay;
@@ -98,6 +103,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     Marker currentMarker;
     Marker startMarker;
     Marker endMarker;
+    boolean trackingStartet = false;
 
     int timer = 0;
 
@@ -130,12 +136,12 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     private void initMap() {
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
-        mapViewOsm = findViewById(R.id.map);
+        mapViewOsm = binding.map;
         mapViewOsm.setTileSource(TileSourceFactory.MAPNIK);
         mapViewOsm.setMultiTouchControls(true);
 
         // Map Controller
-        IMapController mapController = mapViewOsm.getController();
+        mapController = mapViewOsm.getController();
         mapController.setZoom(17.0);
 
         // Event overlay
@@ -151,6 +157,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         if (!hasPermissions(this, PERMISSIONS)) {
             ActivityCompat.requestPermissions(this, PERMISSIONS, 123);
         }
+        // Får feil melding når denne permission ikke er lagt til
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
                 ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return;
@@ -184,17 +191,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
 
     @Override
     public boolean longPressHelper(GeoPoint geoPoint) {
-        if (waypoints.size() == 2) {
-            waypoints.remove(startPoint);
-            waypoints.remove(endPoint);
-            // Remove all overlays
-            mapViewOsm.getOverlays().clear();
-            // Add event (click) listener and compas back
-            mapViewOsm.getOverlays().add(mMapEventsOverlay);
-            mapViewOsm.getOverlays().add(mCompassOverlay);
-
-            mapViewOsm.invalidate();
-        }
+        stopProgram();
         return false;
     }
 
@@ -269,28 +266,87 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
 
     @Override
     public void onLocationChanged(@NonNull Location location) {
-
         String locinfo = getLocationInformation(location.getLatitude(),location.getLongitude());
         //Toast.makeText(this, locinfo, Toast.LENGTH_SHORT).show();
         tvAddress.setText(locinfo);
 
-        //startPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
+        currentPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
 
-        currentMarker.setPosition(currentPoint);
-        currentMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
-        mapViewOsm.getOverlays().add(currentMarker);
-        currentMarker.setIcon(ResourcesCompat.getDrawable(getResources(), R.drawable.currentposicon, null));
-        currentMarker.setTitle("Your position");
+        if(accelerometerSensorChanged) {
+            // Reset position. Set current location to position on the map
+            setPositionToCurrentLocation();
 
-        // Draw tracking line
-        //drawTrackingline();
-
-        //if(accelerometerSensorChanged) {
             // Refresh the map!
             mapViewOsm.invalidate();
-        //}
+        }
         // Reset boolean
-        //accelerometerSensorChanged = false;
+        accelerometerSensorChanged = false;
+    }
+
+    @Override
+    public void onSensorChanged(SensorEvent sensorEvent) {
+        timer++;
+
+        if(sensorEvent.sensor.getType() == Sensor.TYPE_ACCELEROMETER && timer == 60) {
+            accelerometerSensor = sensorEvent.sensor;
+            float val[] = sensorEvent.values;
+            double cal = val[0]*val[0] + val[1]*val[1] + val[2]*val[2];
+
+            Log.d("LOCATIONTEST", "Accel changed " + Math.sqrt(cal));
+
+            accelerometerSensorChanged = true;
+            timer = 0;
+        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int i) {
+
+    }
+
+    @SuppressLint("NonConstantResourceId")
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.menu_reset:
+                setPositionToCurrentLocation();
+                return true;
+            case R.id.menu_start:
+                startProgram();
+                return true;
+            case R.id.menu_stop:
+                stopProgram();
+                return true;
+            case R.id.menu_save:
+
+                return true;
+            case R.id.menu_show_saved_routes:
+
+                return true;
+            case R.id.menu_quit:
+                this.doQuit(null);
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+
+    private void setPositionToCurrentLocation() {
+        if (currentPoint != null) {
+            currentMarker.setPosition(currentPoint);
+            currentMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
+            currentMarker.setIcon(ResourcesCompat.getDrawable(getResources(), R.drawable.currentposicon, null));
+            currentMarker.setTitle("Your position");
+            mapController.setCenter(currentPoint);
+
+            mapViewOsm.getOverlays().add(currentMarker);
+        }
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        this.getMenuInflater().inflate(R.menu.top_menu, menu);
+        return true;
     }
 
     private static boolean hasPermissions(Context context, String... perm){
@@ -326,60 +382,28 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         return null;
     }
 
-    @Override
-    public void onSensorChanged(SensorEvent sensorEvent) {
-        timer++;
+    private void startProgram() {
 
-        if(sensorEvent.sensor.getType() == Sensor.TYPE_ACCELEROMETER && timer == 60) {
-            accelerometerSensor = sensorEvent.sensor;
-            float val[] = sensorEvent.values;
-            double cal = val[0]*val[0] + val[1]*val[1] + val[2]*val[2];
+        trackingStartet = true;
+    }
 
-            Log.d("LOCATIONTEST", "Accel changed " + Math.sqrt(cal));
+    private void stopProgram() {
+        if (waypoints.size() == 2) {
+            waypoints.remove(startPoint);
+            waypoints.remove(endPoint);
+            // Remove all overlays
+            mapViewOsm.getOverlays().clear();
+            // Add event (click) listener and compas back
+            mapViewOsm.getOverlays().add(mMapEventsOverlay);
+            mapViewOsm.getOverlays().add(mCompassOverlay);
 
-            accelerometerSensorChanged = true;
-            timer = 0;
+            mapViewOsm.invalidate();
+
+            trackingStartet = false;
         }
     }
 
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int i) {
-
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.menu_reset:
-//                for (Marker m : markers) {
-//                    mMapView.getOverlays().remove(m);
-//                    mMapView.invalidate();
-//                }
-//                mapViewOsm.getOverlays().removeAll();
-//                waypoints.remove(startPoint);
-                return true;
-            case R.id.menu_start:
-                return true;
-            case R.id.menu_stop:
-                return true;
-            case R.id.menu_save:
-                return true;
-            case R.id.menu_show_saved_routes:
-                return true;
-            case R.id.menu_quit:
-                this.doQuit(null);
-                return true;
-            default:
-                return super.onOptionsItemSelected(item);
-        }
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        this.getMenuInflater().inflate(R.menu.top_menu, menu);
-        return true;
-    }
-
+    // Exit application
     private void doQuit(MenuItem item) {
         this.finish();
     }

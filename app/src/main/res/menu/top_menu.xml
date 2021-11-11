@@ -6,41 +6,49 @@
 
     <item
         android:id="@+id/menu_reset"
+        android:checkable="false"
+        android:checked="false"
         android:icon="@drawable/reset"
-        android:title="Reset map"
+        app:iconTint="@color/teal_700"
+        android:title="@string/reset_map"
         android:visible="true"
         app:showAsAction="always" />
 
     <item
         android:id="@+id/menu_start"
         android:icon="@drawable/start"
-        android:title="Slett"
+        android:title="@string/string_slett"
         android:visible="true"
+        app:iconTint="@color/teal_700"
         app:showAsAction="always" />
 
     <item
         android:id="@+id/menu_stop"
         android:icon="@drawable/stop"
-        android:title="Slett"
+        android:title="@string/slett"
         android:visible="true"
+        app:iconTint="@color/teal_700"
         app:showAsAction="always" />
 
     <item
         android:id="@+id/menu_save"
         android:icon="@drawable/save"
-        android:title="Save route"
+        android:title="@string/save_route"
         android:visible="true"
+        app:iconTint="@color/teal_700"
         app:showAsAction="ifRoom" />
     <item
         android:id="@+id/menu_show_saved_routes"
         android:icon="@drawable/save"
-        android:title="Showe saved routes"
+        android:title="@string/showe_saved_routes"
         android:visible="true"
+        app:iconTint="@color/teal_700"
         app:showAsAction="ifRoom" />
     <item
         android:id="@+id/menu_quit"
         android:icon="@drawable/exit"
-        android:title="Exit"
+        android:title="@string/exit"
+        app:iconTint="@color/teal_700"
         android:visible="true"
         app:showAsAction="ifRoom" />
 </menu>

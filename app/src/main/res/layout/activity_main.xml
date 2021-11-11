@@ -9,11 +9,11 @@
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/my_toolbar"
-        android:layout_width="409dp"
-        android:layout_height="75dp"
+        android:layout_width="0dp"
+        android:layout_height="53dp"
         android:background="@color/material_on_background_disabled"
         android:paddingStart="0dp"
-        android:paddingTop="20dp"
+        android:paddingTop="5dp"
         android:paddingEnd="10dp"
         android:transitionName="Map Tracker"
         android:visibility="visible"
@@ -21,13 +21,14 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:menu="@menu/top_menu"
+        app:theme="@style/MyActionBarTheme"
         app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
-        app:titleTextColor="#000000" />
+        app:titleTextColor="#D8CDCD" />
 
     <LinearLayout
         android:id="@+id/linearLayout"
-        android:layout_width="412dp"
-        android:layout_height="653dp"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:layout_gravity="center_horizontal"
         android:orientation="vertical"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -39,18 +40,26 @@
         <org.osmdroid.views.MapView
             android:id="@+id/map"
             android:layout_width="match_parent"
-            android:layout_height="619dp">
+            android:layout_height="621dp">
 
         </org.osmdroid.views.MapView>
 
         <TextView
             android:id="@+id/tvAddress"
             android:layout_width="match_parent"
-            android:layout_height="27dp"
+            android:layout_height="wrap_content"
+            android:backgroundTint="@color/material_on_background_disabled"
             android:paddingStart="20dp"
+            android:paddingTop="10dp"
             android:paddingEnd="20dp"
+            android:paddingBottom="10dp"
             android:text="@string/textview"
-            android:textSize="16sp" />
+            android:textAlignment="center"
+            android:textAppearance="@style/TextAppearance.AppCompat.Body2"
+            android:textColor="#757575"
+            android:textSize="14sp"
+            android:visibility="visible"
+            tools:visibility="visible" />
 
     </LinearLayout>
 
