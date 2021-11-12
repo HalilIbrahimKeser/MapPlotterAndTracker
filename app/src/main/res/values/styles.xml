@@ -2,7 +2,7 @@
 <resources>
 
     <style name="MyActionBarTheme" parent="ThemeOverlay.AppCompat.Dark.ActionBar">
-        <item name="android:textColorPrimary">@color/teal_700</item>
+        <item name="android:textColorPrimary">#fa0</item>
     </style>
 
 </resources>

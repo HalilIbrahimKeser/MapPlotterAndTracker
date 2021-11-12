@@ -5,6 +5,6 @@
     <string name="slett">Slett</string>
     <string name="string_slett" />
     <string name="save_route">Save route</string>
-    <string name="showe_saved_routes">Showe saved routes</string>
+    <string name="showe_saved_routes">Show saved routes</string>
     <string name="exit">Exit</string>
 </resources>

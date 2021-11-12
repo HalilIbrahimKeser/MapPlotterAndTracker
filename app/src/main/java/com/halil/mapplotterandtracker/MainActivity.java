@@ -1,11 +1,9 @@
 package com.halil.mapplotterandtracker;
 
 import android.Manifest;
-import android.annotation.SuppressLint;
-import android.content.ClipData;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -32,8 +30,13 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.res.ResourcesCompat;
 
 import com.google.android.gms.maps.model.LatLng;
+import com.halil.mapplotterandtracker.Entities.Trip;
+import com.halil.mapplotterandtracker.Repository.Repository;
 import com.halil.mapplotterandtracker.databinding.ActivityMainBinding;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.osmdroid.api.IMapController;
 import org.osmdroid.bonuspack.routing.OSRMRoadManager;
 import org.osmdroid.bonuspack.routing.Road;
@@ -53,6 +56,11 @@ import org.osmdroid.views.overlay.compass.CompassOverlay;
 import org.osmdroid.views.overlay.compass.InternalCompassOrientationProvider;
 import org.osmdroid.views.overlay.gestures.RotationGestureOverlay;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -103,9 +111,15 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     Marker currentMarker;
     Marker startMarker;
     Marker endMarker;
-    boolean trackingStartet = false;
+    boolean trackingStartet = true;
+    Trip trip;
+    Location location;
 
     int timer = 0;
+    Context context;
+
+    //Repo
+    private Repository mRepository;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -113,8 +127,9 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         LayoutInflater layoutInflater = (LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE);
         binding = ActivityMainBinding.inflate(layoutInflater);
         setContentView(binding.getRoot());
-        Context ctx = getApplicationContext();
-        Configuration.getInstance().load(ctx, PreferenceManager.getDefaultSharedPreferences(ctx));
+
+        context = getApplicationContext();
+        Configuration.getInstance().load(context, PreferenceManager.getDefaultSharedPreferences(context));
 
         //Init views
         tvAddress = binding.tvAddress;
@@ -131,6 +146,8 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
 
         // Init Map
         initMap();
+
+        mRepository = new Repository(getApplication());
     }
 
     private void initMap() {
@@ -144,11 +161,10 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         mapController = mapViewOsm.getController();
         mapController.setZoom(17.0);
 
-        // Event overlay
+        // Add Event overlay and Compass overlay;
         mMapEventsOverlay = new MapEventsOverlay(this);
-        mapViewOsm.getOverlays().add(0, mMapEventsOverlay);
+        mapViewOsm.getOverlays().add(mMapEventsOverlay);
 
-        // Compass overlay;
         mCompassOverlay = new CompassOverlay(this, new InternalCompassOrientationProvider(this), mapViewOsm);
         mCompassOverlay.enableCompass();
         mapViewOsm.getOverlays().add(mCompassOverlay);
@@ -157,7 +173,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         if (!hasPermissions(this, PERMISSIONS)) {
             ActivityCompat.requestPermissions(this, PERMISSIONS, 123);
         }
-        // Får feil melding når denne permission ikke er lagt til
+        // får feil melding når denne permission ikke er lagt til
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
                 ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return;
@@ -171,14 +187,14 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         waypoints = new ArrayList<>();
 
         // Gangvei
-        ((OSRMRoadManager)roadManager).setMean(OSRMRoadManager.MEAN_BY_FOOT);
+        ((OSRMRoadManager) roadManager).setMean(OSRMRoadManager.MEAN_BY_FOOT);
 
         // Current point
         currentPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
         mapController.setCenter(currentPoint);
         double latitude = location.getLatitude();
         double longitude = location.getLongitude();
-        LatLng currentPosition = new LatLng(latitude,longitude);
+        LatLng currentPosition = new LatLng(latitude, longitude);
         //waypoints.add(currentPoint);
 
         // Initialize start marker and end marker
@@ -186,7 +202,45 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         endMarker = new Marker(mapViewOsm);
         currentMarker = new Marker(mapViewOsm);
 
-        Helper.Deg2UTM curUTM = new Helper.Deg2UTM(currentPosition.latitude,currentPosition.longitude);
+        Helper.Deg2UTM curUTM = new Helper.Deg2UTM(currentPosition.latitude, currentPosition.longitude);
+    }
+
+    @Override
+    public boolean singleTapConfirmedHelper(GeoPoint point) {
+        clickLocation = new GeoPoint(point.getLatitude(), point.getLongitude());
+
+        if (trackingStartet) {
+            if (waypoints.size() == 0) {
+                startPoint = clickLocation;
+                waypoints.add(startPoint);
+
+                startMarker.setPosition(startPoint);
+                startMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
+                startMarker.setIcon(ResourcesCompat.getDrawable(getResources(), R.drawable.starticon, null));
+                startMarker.setTitle("Start point");
+                mapViewOsm.getOverlays().add(startMarker);
+                mapViewOsm.invalidate();
+
+            } else if (waypoints.size() == 1) {
+                endPoint = clickLocation;
+                waypoints.add(endPoint);
+
+                endMarker.setPosition(endPoint);
+                endMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
+                endMarker.setIcon(ResourcesCompat.getDrawable(getResources(), R.drawable.endicon, null));
+                endMarker.setTitle("End point");
+                mapViewOsm.getOverlays().add(endMarker);
+                // Now we have to points and can draw the road beetween and update the map
+                drawTrackingline();
+
+            } else {
+                Toast.makeText(this, "Remove the waypoints", Toast.LENGTH_SHORT).show();
+            }
+        } else {
+            Toast.makeText(this, "Push start to track", Toast.LENGTH_SHORT).show();
+        }
+
+        return false;
     }
 
     @Override
@@ -195,60 +249,34 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         return false;
     }
 
-    @Override
-    public boolean singleTapConfirmedHelper(GeoPoint point) {
-        clickLocation = new GeoPoint(point.getLatitude(), point.getLongitude());
-
-        if (waypoints.size() < 1) {
-            //waypoints.remove(startPoint);
-            startPoint = clickLocation;
-            waypoints.add(startPoint);
-
-            startMarker.setPosition(startPoint);
-            startMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
-            startMarker.setIcon(ResourcesCompat.getDrawable(getResources(), R.drawable.starticon, null));
-            startMarker.setTitle("Start point");
-            mapViewOsm.getOverlays().add(startMarker);
-            mapViewOsm.invalidate();
-
-        } else if (waypoints.size() == 1) {
-            //waypoints.remove(endPoint);
-            endPoint = clickLocation;
-            waypoints.add(endPoint);
-
-            endMarker.setPosition(endPoint);
-            endMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
-            endMarker.setIcon(ResourcesCompat.getDrawable(getResources(), R.drawable.endicon, null));
-            endMarker.setTitle("End point");
-            mapViewOsm.getOverlays().add(endMarker);
-
-            drawTrackingline();
-            mapViewOsm.invalidate();
-        }
-        return false;
-    }
-
     private void drawTrackingline() {
-        Thread thread = new Thread(() -> {
-            if(waypoints.size() >= 2) {
-                try  {
+        // https://github.com/MKergall/osmbonuspack
+
+        if (waypoints.size() >= 2 && trackingStartet) {
+            Thread thread = new Thread(() -> {
+                try {
                     // Road between points
                     road = roadManager.getRoad(waypoints);
 
                     // Build a Polyline with the route shape
                     roadOverlay = RoadManager.buildRoadOverlay(road);
+                    roadOverlay.setGeodesic(true);
 
                     // Add this Polyline to the overlays to the map
-                    mapViewOsm.getOverlays().add(roadOverlay);
+                    if (road.mNodes.size() > 0) {
+                        mapViewOsm.getOverlays().add(roadOverlay);
+                    } else {
+                        Toast.makeText(context, "No nodes to draw, fail in roadManager", Toast.LENGTH_SHORT).show();
+                    }
 
                     // Adds nodes to the rode
                     Drawable nodeIcon = ResourcesCompat.getDrawable(getResources(), R.drawable.markernode, null);
-                    for (int i=0; i<road.mNodes.size(); i++){
+                    for (int i = 0; i < road.mNodes.size(); i++) {
                         node = road.mNodes.get(i);
                         nodeMarker = new Marker(mapViewOsm);
                         nodeMarker.setPosition(node.mLocation);
                         nodeMarker.setIcon(nodeIcon);
-                        nodeMarker.setTitle("Step "+ i );
+                        nodeMarker.setTitle("Step " + i);
                         mapViewOsm.getOverlays().add(nodeMarker);
 
                         nodeMarker.setSnippet(node.mInstructions);
@@ -256,25 +284,54 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
                         Drawable icon = ResourcesCompat.getDrawable(getResources(), R.mipmap.continueicon, null);
                         nodeMarker.setImage(icon);
                     }
+
+                    // Update map
+                    mapViewOsm.invalidate();
+
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-            }
-        });
-        thread.start();
+            });
+            thread.start();
+        } else {
+            Toast.makeText(this, "Push start to track", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void saveTrip() {
+        // Create a trip and save it to file
+        if (waypoints.size() != 0 && road.mNodes.size() != 0) {
+            String mFromAdress = getLocationInformation(waypoints.get(0).getLatitude(), waypoints.get(0).getLongitude());
+            String mToAdress = getLocationInformation(waypoints.get(1).getLatitude(), waypoints.get(1).getLongitude());
+            double mLength = road.mLength;
+            double mNodes = road.mNodes.size();
+            double mDuration = road.mLength;
+            double mElevation = Math.max(waypoints.get(0).getAltitude(), waypoints.get(1).getAltitude());
+            double mStartPointLat = waypoints.get(0).getLatitude();
+            double mStartPointLong = waypoints.get(0).getLongitude();
+            double mEndPointLat = waypoints.get(1).getLatitude();
+            double mEndPointLong = waypoints.get(1).getLongitude();
+            trip = new Trip(mFromAdress, mToAdress, mLength, mNodes, mDuration, mElevation, mStartPointLat, mStartPointLong, mEndPointLat, mEndPointLong);
+
+            //Save trip
+            mRepository.tripInsert(trip);
+
+            Toast.makeText(this, "Trip saved", Toast.LENGTH_LONG).show();
+        } else {
+            Toast.makeText(this, "No trip to save. Create a trip first", Toast.LENGTH_SHORT).show();
+        }
     }
 
     @Override
     public void onLocationChanged(@NonNull Location location) {
-        String locinfo = getLocationInformation(location.getLatitude(),location.getLongitude());
-        //Toast.makeText(this, locinfo, Toast.LENGTH_SHORT).show();
+        String locinfo = getLocationInformation(location.getLatitude(), location.getLongitude());
         tvAddress.setText(locinfo);
 
         currentPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
 
-        if(accelerometerSensorChanged) {
+        if (accelerometerSensorChanged) {
             // Reset position. Set current location to position on the map
-            setPositionToCurrentLocation();
+            //setPositionToCurrentLocation();
 
             // Refresh the map!
             mapViewOsm.invalidate();
@@ -286,11 +343,10 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
         timer++;
-
-        if(sensorEvent.sensor.getType() == Sensor.TYPE_ACCELEROMETER && timer == 60) {
+        if (sensorEvent.sensor.getType() == Sensor.TYPE_ACCELEROMETER && timer == 60) {
             accelerometerSensor = sensorEvent.sensor;
             float val[] = sensorEvent.values;
-            double cal = val[0]*val[0] + val[1]*val[1] + val[2]*val[2];
+            double cal = val[0] * val[0] + val[1] * val[1] + val[2] * val[2];
 
             Log.d("LOCATIONTEST", "Accel changed " + Math.sqrt(cal));
 
@@ -301,10 +357,8 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int i) {
-
     }
 
-    @SuppressLint("NonConstantResourceId")
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
@@ -318,9 +372,12 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
                 stopProgram();
                 return true;
             case R.id.menu_save:
-
+                saveTrip();
                 return true;
             case R.id.menu_show_saved_routes:
+                Intent intent = new Intent(this, SavedRoutesActivity.class);
+                //intent.putExtra(EXTRA_MESSAGE, message);
+                startActivity(intent);
 
                 return true;
             case R.id.menu_quit:
@@ -329,6 +386,23 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
             default:
                 return super.onOptionsItemSelected(item);
         }
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        this.getMenuInflater().inflate(R.menu.top_menu, menu);
+        return true;
+    }
+
+    private static boolean hasPermissions(Context context, String... perm) {
+        if (context != null && perm != null) {
+            for (String p : perm) {
+                if (ActivityCompat.checkSelfPermission(context, p) != PackageManager.PERMISSION_GRANTED) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     private void setPositionToCurrentLocation() {
@@ -341,23 +415,6 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
 
             mapViewOsm.getOverlays().add(currentMarker);
         }
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        this.getMenuInflater().inflate(R.menu.top_menu, menu);
-        return true;
-    }
-
-    private static boolean hasPermissions(Context context, String... perm){
-        if(context!=null && perm!=null){
-            for(String p: perm){
-                if(ActivityCompat.checkSelfPermission(context, p) != PackageManager.PERMISSION_GRANTED){
-                    return false;
-                }
-            }
-        }
-        return true;
     }
 
     private String getLocationInformation(double lat, double lng) {
@@ -377,13 +434,12 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
             return add;
         } catch (IOException e) {
             e.printStackTrace();
-            Toast.makeText( this, e.getMessage(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
         }
         return null;
     }
 
     private void startProgram() {
-
         trackingStartet = true;
     }
 
@@ -391,19 +447,17 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         if (waypoints.size() == 2) {
             waypoints.remove(startPoint);
             waypoints.remove(endPoint);
+
             // Remove all overlays
             mapViewOsm.getOverlays().clear();
-            // Add event (click) listener and compas back
-            mapViewOsm.getOverlays().add(mMapEventsOverlay);
-            mapViewOsm.getOverlays().add(mCompassOverlay);
 
-            mapViewOsm.invalidate();
+            // Init map again
+            initMap();
 
             trackingStartet = false;
         }
     }
 
-    // Exit application
     private void doQuit(MenuItem item) {
         this.finish();
     }

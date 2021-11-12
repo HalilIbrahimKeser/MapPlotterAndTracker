@@ -11,7 +11,7 @@
         android:id="@+id/my_toolbar"
         android:layout_width="0dp"
         android:layout_height="53dp"
-        android:background="@color/material_on_background_disabled"
+        android:background="@color/design_default_color_secondary_variant"
         android:paddingStart="0dp"
         android:paddingTop="5dp"
         android:paddingEnd="10dp"
@@ -21,8 +21,8 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:menu="@menu/top_menu"
-        app:theme="@style/MyActionBarTheme"
         app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
+        app:theme="@style/MyActionBarTheme"
         app:titleTextColor="#D8CDCD" />
 
     <LinearLayout

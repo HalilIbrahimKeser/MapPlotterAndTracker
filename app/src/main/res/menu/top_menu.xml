@@ -9,7 +9,6 @@
         android:checkable="false"
         android:checked="false"
         android:icon="@drawable/reset"
-        app:iconTint="@color/teal_700"
         android:title="@string/reset_map"
         android:visible="true"
         app:showAsAction="always" />
@@ -19,7 +18,6 @@
         android:icon="@drawable/start"
         android:title="@string/string_slett"
         android:visible="true"
-        app:iconTint="@color/teal_700"
         app:showAsAction="always" />
 
     <item
@@ -27,7 +25,6 @@
         android:icon="@drawable/stop"
         android:title="@string/slett"
         android:visible="true"
-        app:iconTint="@color/teal_700"
         app:showAsAction="always" />
 
     <item
@@ -35,20 +32,17 @@
         android:icon="@drawable/save"
         android:title="@string/save_route"
         android:visible="true"
-        app:iconTint="@color/teal_700"
         app:showAsAction="ifRoom" />
     <item
         android:id="@+id/menu_show_saved_routes"
         android:icon="@drawable/save"
         android:title="@string/showe_saved_routes"
         android:visible="true"
-        app:iconTint="@color/teal_700"
         app:showAsAction="ifRoom" />
     <item
         android:id="@+id/menu_quit"
         android:icon="@drawable/exit"
         android:title="@string/exit"
-        app:iconTint="@color/teal_700"
         android:visible="true"
         app:showAsAction="ifRoom" />
 </menu>
