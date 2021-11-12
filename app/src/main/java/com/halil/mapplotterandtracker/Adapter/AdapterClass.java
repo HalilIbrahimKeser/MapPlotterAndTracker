@@ -1,5 +1,6 @@
 package com.halil.mapplotterandtracker.Adapter;
 
+import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -10,37 +11,69 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.halil.mapplotterandtracker.Entities.Trip;
 import com.halil.mapplotterandtracker.R;
-
-import java.util.ArrayList;
+import java.util.List;
 
 public class AdapterClass extends RecyclerView.Adapter<AdapterClass.ViewHolder> {
-    ArrayList<Trip> data = new ArrayList<>();
 
+    private List<Trip> trips;
+    private Context context;
+    private ItemClickListener itemClickListener;
+
+    public AdapterClass(Context context, List<Trip> trips){
+        this.trips = trips;
+        this.context = context;
+    }
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        return new ViewHolder(LayoutInflater.from(parent.getContext()).inflate(R.layout.recyclerview_item, null));
+        LayoutInflater layoutInflater = LayoutInflater.from(this.context);
+        View view = layoutInflater.inflate(R.layout.recyclerview_item, parent, false);
+        return new ViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        holder.name.setText(data.get(position).mFromAddress);
-        StringBuilder stringBuilder = new StringBuilder();
+        holder.tvTripidLine.setText(String.valueOf(trips.get(position).mTripId));
+        holder.tvTripidLine.setText(String.valueOf(trips.get(position).mTripId));
 
-        holder.trip.setText(data.get(position).age.toString());
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append("From adress: " + trips.get(position).mFromAddress + "\nTo adress: " + trips.get(position).mToAddress +
+                "\nLength: " + trips.get(position).mLength + ", Points: " + trips.get(position).mNodes +
+                "\nDuration: " + trips.get(position).mDuration + ", Elevation: " + trips.get(position).mElevation);
+        holder.tvTrip.setText(stringBuilder);
     }
 
     @Override
     public int getItemCount() {
-        return 0;
+        return trips.size();
     }
 
-    public class ViewHolder extends RecyclerView.ViewHolder {
-        TextView name, trip;
+    public interface ItemClickListener {
+        void onItemClick(View view, int position);
+    }
+
+    public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener{
+        TextView tvTripidLine;
+        TextView tvTrip;
+
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
-            name = itemView.findViewById(R.id.tvAddress);
-            trip = itemView.findViewById(R.id.tvTrip);
+            tvTripidLine = itemView.findViewById(R.id.tvTripidLine);
+            tvTrip = itemView.findViewById(R.id.tvTrip);
+            tvTripidLine.setOnClickListener(this::onClick);
+            tvTrip.setOnClickListener(this::onClick);
         }
+
+        @Override
+        public void onClick(View view) {
+            if(AdapterClass.this.itemClickListener != null){
+                int pos = getAbsoluteAdapterPosition();
+                itemClickListener.onItemClick(view, pos);
+            }
+        }
+    }
+
+    public void setClickListener(AdapterClass.ItemClickListener itemClickListener) {
+        this.itemClickListener = itemClickListener;
     }
 }

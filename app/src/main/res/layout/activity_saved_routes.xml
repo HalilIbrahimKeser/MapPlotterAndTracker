@@ -13,7 +13,7 @@
         android:background="@color/design_default_color_secondary_variant"
         android:paddingStart="0dp"
         android:paddingTop="5dp"
-        android:paddingEnd="150dp"
+        android:paddingEnd="350dp"
         android:transitionName="Map Tracker"
         android:visibility="visible"
         app:layout_constraintEnd_toEndOf="parent"

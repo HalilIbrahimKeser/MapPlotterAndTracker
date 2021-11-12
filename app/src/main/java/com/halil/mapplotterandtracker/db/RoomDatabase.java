@@ -46,7 +46,6 @@ public abstract class RoomDatabase extends androidx.room.RoomDatabase {
                 dao.deleteAlltrips();
 
                 //Dummy Trip
-                //int mId = (1 + (int) (Math.random() * 5000));
                 Trip trip =  new Trip("Home", "Job", 0.5, 10, 50, 50, 59.948376, 11.007322, 59.943497, 11.016769);
 
                 dao.tripInsert(trip);

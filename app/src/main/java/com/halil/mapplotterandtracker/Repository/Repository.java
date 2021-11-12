@@ -15,8 +15,6 @@ public class Repository {
 
     private final Dao mDao;
     private final LiveData<List<Trip>> mAllTrips;
-    public LiveData<List<Trip>> singleTrip;
-    public Object deleteTrip;
 
     public Repository(Application application) {
 
@@ -32,12 +30,13 @@ public class Repository {
         });
     }
 
-    LiveData<List<Trip>> getAllTrips() {
+    public LiveData<List<Trip>> getAllTrips() {
         return mAllTrips;
     }
 
-    LiveData<Trip> getTrip(int mTripID) {
-        return mDao.getTrip(mTripID);
+    public LiveData<Trip> getTrip(int mTripID) {
+        LiveData<Trip> trip = mDao.getTrip(mTripID);
+        return trip;
     }
 
     public void deleteTrip(int trip) {

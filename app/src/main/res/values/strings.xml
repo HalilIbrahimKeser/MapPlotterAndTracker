@@ -7,4 +7,5 @@
     <string name="save_route">Save route</string>
     <string name="showe_saved_routes">Show saved routes</string>
     <string name="exit">Exit</string>
+    <string name="no_data_yet">No data yet</string>
 </resources>

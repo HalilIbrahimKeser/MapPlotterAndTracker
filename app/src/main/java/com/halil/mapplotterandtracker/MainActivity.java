@@ -28,10 +28,14 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.res.ResourcesCompat;
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.halil.mapplotterandtracker.Entities.Trip;
 import com.halil.mapplotterandtracker.Repository.Repository;
+import com.halil.mapplotterandtracker.VievModel.ViewModel;
 import com.halil.mapplotterandtracker.databinding.ActivityMainBinding;
 
 import org.json.JSONArray;
@@ -80,17 +84,17 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     // Views
     TextView tvAddress;
 
-    // Sensor
+    // SENSOR ----------------
     SensorManager sensorManager;
     Sensor accelerometerSensor;
     Boolean accelerometerSensorChanged = false;
 
-    // Location
+    // LOCATION ---------------------
     LocationManager locationManager;
     RoadManager roadManager = new OSRMRoadManager(this, MY_USER_AGENT);
     private static final String MY_USER_AGENT = "Halil007";
 
-    // MAP
+    // MAP ---------------------
     MapView mapViewOsm;
     IMapController mapController;
     MapEventsOverlay mMapEventsOverlay;
@@ -113,13 +117,18 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     Marker endMarker;
     boolean trackingStartet = true;
     Trip trip;
+    Trip tempTrip;
     Location location;
-
     int timer = 0;
     Context context;
 
-    //Repo
+    // REPO -------------------
     private Repository mRepository;
+    // View model
+    ViewModel mViewModel;
+
+    String extraValue;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -144,10 +153,46 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         accelerometerSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         sensorManager.registerListener(this, accelerometerSensor, SensorManager.SENSOR_DELAY_NORMAL);
 
+        // Repo
+        mRepository = new Repository(getApplication());
+
+        Bundle bundle = getIntent().getExtras();
+        if(bundle != null) {
+            extraValue = getIntent().getStringExtra("TripID");
+        }
+
+        if(extraValue != null) {
+            mViewModel = new ViewModelProvider(this).get(ViewModel.class);
+            mViewModel.getTrip(Integer.parseInt(extraValue)).observe(this, tripTemporary -> {
+                tempTrip = tripTemporary;
+            });
+        }
+        if(tempTrip != null) {
+            GeoPoint start = new GeoPoint(tempTrip.mStartPointLat, tempTrip.mStartPointLong);
+            GeoPoint end = new GeoPoint(tempTrip.mEndPointLat, tempTrip.mEndPointLong);
+
+            startPoint = start;
+            waypoints.add(startPoint);
+            startMarker.setPosition(startPoint);
+            startMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
+            startMarker.setIcon(ResourcesCompat.getDrawable(getResources(), R.drawable.starticon, null));
+            startMarker.setTitle("Start point");
+            mapViewOsm.getOverlays().add(startMarker);
+
+            endPoint = end;
+            waypoints.add(endPoint);
+            endMarker.setPosition(endPoint);
+            endMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
+            endMarker.setIcon(ResourcesCompat.getDrawable(getResources(), R.drawable.endicon, null));
+            endMarker.setTitle("End point");
+            mapViewOsm.getOverlays().add(endMarker);
+
+            trackingStartet = true;
+            drawTrackingline();
+        }
+
         // Init Map
         initMap();
-
-        mRepository = new Repository(getApplication());
     }
 
     private void initMap() {
@@ -190,12 +235,13 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         ((OSRMRoadManager) roadManager).setMean(OSRMRoadManager.MEAN_BY_FOOT);
 
         // Current point
-        currentPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
+        if(location != null) {
+            currentPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
+        }
         mapController.setCenter(currentPoint);
         double latitude = location.getLatitude();
         double longitude = location.getLongitude();
         LatLng currentPosition = new LatLng(latitude, longitude);
-        //waypoints.add(currentPoint);
 
         // Initialize start marker and end marker
         startMarker = new Marker(mapViewOsm);
@@ -313,7 +359,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
             double mEndPointLong = waypoints.get(1).getLongitude();
             trip = new Trip(mFromAdress, mToAdress, mLength, mNodes, mDuration, mElevation, mStartPointLat, mStartPointLong, mEndPointLat, mEndPointLong);
 
-            //Save trip
+            // Save trip
             mRepository.tripInsert(trip);
 
             Toast.makeText(this, "Trip saved", Toast.LENGTH_LONG).show();

@@ -6,37 +6,40 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.Toast;
+import android.view.View;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.halil.mapplotterandtracker.Adapter.AdapterClass;
 import com.halil.mapplotterandtracker.Entities.Trip;
+import com.halil.mapplotterandtracker.Repository.Repository;
+import com.halil.mapplotterandtracker.VievModel.ViewModel;
 import com.halil.mapplotterandtracker.databinding.ActivitySavedRoutesBinding;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 public class SavedRoutesActivity extends AppCompatActivity {
 
+    private static final String EXTRA_MESSAGE = "TripID" ;
+    private static Trip trip;
     ActivitySavedRoutesBinding binding;
     Intent intent;
-    // File
-    private static final String FILE_NAME = "trips.txt";
-    File file;
-    FileReader fileReader;
     Context context;
     RecyclerView recyclerView;
+    List<Trip> trips;
+
+    // Repo
+    private Repository mRepository;
+    // View model
+    ViewModel mViewModel;
+    AdapterClass adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,6 +57,22 @@ public class SavedRoutesActivity extends AppCompatActivity {
         // Recyclerview
         recyclerView = binding.recyclerview;
 
+        // ViewModel
+        mViewModel = new ViewModelProvider(this).get(ViewModel.class);
+        mViewModel.getAllTrips().observe(this, trips -> {
+            adapter = new AdapterClass(this, trips);
+            recyclerView.setAdapter(adapter);
+            recyclerView.setLayoutManager(new LinearLayoutManager(context));
+            adapter.setClickListener(new AdapterClass.ItemClickListener() {
+                @Override
+                public void onItemClick(View view, int position) {
+                    long tripId = trips.get(position).mTripId;
+                    Intent intent = new Intent(context, MainActivity.class);
+                    intent.putExtra("TripID", String.valueOf(tripId));
+                    startActivity(intent);
+                }
+            });
+        });
     }
 
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -63,10 +82,7 @@ public class SavedRoutesActivity extends AppCompatActivity {
                 //intent.putExtra(EXTRA_MESSAGE, message);
                 startActivity(intent);
                 return true;
-            case R.id.menu_goback2:
-                intent = new Intent(this, MainActivity.class);
-                startActivity(intent);
-                return true;
+
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -77,4 +93,6 @@ public class SavedRoutesActivity extends AppCompatActivity {
         this.getMenuInflater().inflate(R.menu.top_menu2, menu);
         return true;
     }
+
+
 }
