@@ -10,33 +10,25 @@ import android.view.View;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-import androidx.lifecycle.LiveData;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.halil.mapplotterandtracker.Adapter.AdapterClass;
 import com.halil.mapplotterandtracker.Entities.Trip;
-import com.halil.mapplotterandtracker.Repository.Repository;
 import com.halil.mapplotterandtracker.VievModel.ViewModel;
 import com.halil.mapplotterandtracker.databinding.ActivitySavedRoutesBinding;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 
 public class SavedRoutesActivity extends AppCompatActivity {
 
-    private static final String EXTRA_MESSAGE = "TripID" ;
     private static Trip trip;
     ActivitySavedRoutesBinding binding;
     Intent intent;
     Context context;
     RecyclerView recyclerView;
-    List<Trip> trips;
 
-    // Repo
-    private Repository mRepository;
     // View model
     ViewModel mViewModel;
     AdapterClass adapter;
@@ -82,10 +74,8 @@ public class SavedRoutesActivity extends AppCompatActivity {
         intent = new Intent(this, MainActivity.class);
         switch (item.getItemId()) {
             case R.id.menu_goback:
-                //intent.putExtra(EXTRA_MESSAGE, message);
                 startActivity(intent);
                 return true;
-
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -96,6 +86,4 @@ public class SavedRoutesActivity extends AppCompatActivity {
         this.getMenuInflater().inflate(R.menu.top_menu2, menu);
         return true;
     }
-
-
 }

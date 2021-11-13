@@ -28,19 +28,12 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.res.ResourcesCompat;
-import androidx.lifecycle.LiveData;
-import androidx.lifecycle.ViewModelProvider;
-import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.halil.mapplotterandtracker.Entities.Trip;
 import com.halil.mapplotterandtracker.Repository.Repository;
-import com.halil.mapplotterandtracker.VievModel.ViewModel;
 import com.halil.mapplotterandtracker.databinding.ActivityMainBinding;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 import org.osmdroid.api.IMapController;
 import org.osmdroid.bonuspack.routing.OSRMRoadManager;
 import org.osmdroid.bonuspack.routing.Road;
@@ -53,18 +46,10 @@ import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.MapEventsOverlay;
 import org.osmdroid.views.overlay.Marker;
-import org.osmdroid.views.overlay.MinimapOverlay;
 import org.osmdroid.views.overlay.Polyline;
-import org.osmdroid.views.overlay.ScaleBarOverlay;
 import org.osmdroid.views.overlay.compass.CompassOverlay;
 import org.osmdroid.views.overlay.compass.InternalCompassOrientationProvider;
-import org.osmdroid.views.overlay.gestures.RotationGestureOverlay;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -100,10 +85,6 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     MapEventsOverlay mMapEventsOverlay;
     Polyline roadOverlay;
     CompassOverlay mCompassOverlay;
-    private RotationGestureOverlay mRotationGestureOverlay;
-    private ScaleBarOverlay mScaleBarOverlay;
-    private MinimapOverlay mMinimapOverlay;
-    private Polyline mPolyline;
     ArrayList<GeoPoint> waypoints;
     Road road;
     Marker nodeMarker;
@@ -117,15 +98,11 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     Marker endMarker;
     boolean trackingStartet = true;
     Trip trip;
-    Trip tempTrip;
-    Location location;
     int timer = 0;
     Context context;
 
     // REPO -------------------
     private Repository mRepository;
-    // View model
-    ViewModel mViewModel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -163,8 +140,8 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         initMap();
 
         // Testing / Deleting
-        mRepository.deleteTrip(8);
-        mRepository.deleteTrip(9);
+//        mRepository.deleteTrip(8);
+//        mRepository.deleteTrip(9);
     }
 
     private void initMap() {
@@ -348,9 +325,6 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         currentPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
 
         if (accelerometerSensorChanged) {
-            // Reset position. Set current location to position on the map
-            //setPositionToCurrentLocation();
-
             // Refresh the map!
             mapViewOsm.invalidate();
         }
@@ -394,9 +368,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
                 return true;
             case R.id.menu_show_saved_routes:
                 Intent intent = new Intent(this, SavedRoutesActivity.class);
-                //intent.putExtra(EXTRA_MESSAGE, message);
                 startActivity(intent);
-
                 return true;
             case R.id.menu_quit:
                 this.doQuit(null);
