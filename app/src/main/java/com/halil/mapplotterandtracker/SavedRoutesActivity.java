@@ -66,9 +66,12 @@ public class SavedRoutesActivity extends AppCompatActivity {
             adapter.setClickListener(new AdapterClass.ItemClickListener() {
                 @Override
                 public void onItemClick(View view, int position) {
-                    long tripId = trips.get(position).mTripId;
                     Intent intent = new Intent(context, MainActivity.class);
-                    intent.putExtra("TripID", String.valueOf(tripId));
+                    intent.putExtra("TripID", String.valueOf(trips.get(position).mTripId));
+                    intent.putExtra("mStartPointLat", String.valueOf(trips.get(position).mStartPointLat));
+                    intent.putExtra("mStartPointLong", String.valueOf(trips.get(position).mStartPointLong));
+                    intent.putExtra("mEndPointLat", String.valueOf(trips.get(position).mEndPointLat));
+                    intent.putExtra("mEndPointLong", String.valueOf(trips.get(position).mEndPointLong));
                     startActivity(intent);
                 }
             });

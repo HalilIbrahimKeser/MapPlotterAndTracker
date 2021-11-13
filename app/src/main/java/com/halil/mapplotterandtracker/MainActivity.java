@@ -127,9 +127,6 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     // View model
     ViewModel mViewModel;
 
-    String extraValue;
-
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -158,41 +155,16 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
 
         Bundle bundle = getIntent().getExtras();
         if(bundle != null) {
-            extraValue = getIntent().getStringExtra("TripID");
-        }
-
-        if(extraValue != null) {
-            mViewModel = new ViewModelProvider(this).get(ViewModel.class);
-            mViewModel.getTrip(Integer.parseInt(extraValue)).observe(this, tripTemporary -> {
-                tempTrip = tripTemporary;
-            });
-        }
-        if(tempTrip != null) {
-            GeoPoint start = new GeoPoint(tempTrip.mStartPointLat, tempTrip.mStartPointLong);
-            GeoPoint end = new GeoPoint(tempTrip.mEndPointLat, tempTrip.mEndPointLong);
-
-            startPoint = start;
-            waypoints.add(startPoint);
-            startMarker.setPosition(startPoint);
-            startMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
-            startMarker.setIcon(ResourcesCompat.getDrawable(getResources(), R.drawable.starticon, null));
-            startMarker.setTitle("Start point");
-            mapViewOsm.getOverlays().add(startMarker);
-
-            endPoint = end;
-            waypoints.add(endPoint);
-            endMarker.setPosition(endPoint);
-            endMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
-            endMarker.setIcon(ResourcesCompat.getDrawable(getResources(), R.drawable.endicon, null));
-            endMarker.setTitle("End point");
-            mapViewOsm.getOverlays().add(endMarker);
-
-            trackingStartet = true;
-            drawTrackingline();
+            // If there is intent extra, than go to method to show the trip from the intent of SavedRoutesActivity
+            setTheTripFromIntentExtra();
         }
 
         // Init Map
         initMap();
+
+        // Testing / Deleting
+        mRepository.deleteTrip(8);
+        mRepository.deleteTrip(9);
     }
 
     private void initMap() {
@@ -438,6 +410,61 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     public boolean onCreateOptionsMenu(Menu menu) {
         this.getMenuInflater().inflate(R.menu.top_menu, menu);
         return true;
+    }
+
+    private void setTheTripFromIntentExtra() {
+        // Intent extras
+        String stringTripID;
+        String stringmStartPointLat;
+        String stringmStartPointLong;
+        String stringmEndPointLat;
+        String stringmEndPointLong;
+
+        // values to get from the intent extra strings
+        double startPointLat;
+        double startPointLong;
+        double endPointLat;
+        double endPointLong;
+
+        stringTripID = getIntent().getStringExtra("TripID");
+        stringmStartPointLat = getIntent().getStringExtra("mStartPointLat");
+        stringmStartPointLong = getIntent().getStringExtra("mStartPointLong");
+        stringmEndPointLat = getIntent().getStringExtra("mEndPointLat");
+        stringmEndPointLong = getIntent().getStringExtra("mEndPointLong");
+
+        if(stringTripID == null) {
+            return;
+        }
+
+        startPointLat = Double.parseDouble(stringmStartPointLat);
+        startPointLong = Double.parseDouble(stringmStartPointLong);
+        endPointLat = Double.parseDouble(stringmEndPointLat);
+        endPointLong = Double.parseDouble(stringmEndPointLong);
+
+        if(startPointLat != 0) {
+            GeoPoint start = new GeoPoint(startPointLat, startPointLong);
+            GeoPoint end = new GeoPoint(endPointLat, endPointLong);
+            initMap();
+
+            startPoint = start;
+            waypoints.add(startPoint);
+            startMarker.setPosition(startPoint);
+            startMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
+            startMarker.setIcon(ResourcesCompat.getDrawable(getResources(), R.drawable.starticon, null));
+            startMarker.setTitle("Start point");
+            mapViewOsm.getOverlays().add(startMarker);
+
+            endPoint = end;
+            waypoints.add(endPoint);
+            endMarker.setPosition(endPoint);
+            endMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
+            endMarker.setIcon(ResourcesCompat.getDrawable(getResources(), R.drawable.endicon, null));
+            endMarker.setTitle("End point");
+            mapViewOsm.getOverlays().add(endMarker);
+
+            trackingStartet = true;
+            drawTrackingline();
+        }
     }
 
     private static boolean hasPermissions(Context context, String... perm) {
