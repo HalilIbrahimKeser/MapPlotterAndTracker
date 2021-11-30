@@ -4,53 +4,58 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:theme="@style/Theme.AppCompat.NoActionBar"
-    tools:context=".MainActivity">
+    tools:context=".PlanedRoutesActivity">
 
     <androidx.appcompat.widget.Toolbar
-        android:id="@+id/my_toolbar"
+        android:id="@+id/my_toolbar3"
         android:layout_width="0dp"
-        android:layout_height="55dp"
+        android:layout_height="53dp"
         android:background="@color/design_default_color_secondary_variant"
         android:paddingStart="0dp"
-        android:paddingEnd="10dp"
+        android:paddingTop="5dp"
+        android:paddingEnd="350dp"
         android:transitionName="Map Tracker"
         android:visibility="visible"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:menu="@menu/top_menu"
-        app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
+        app:menu="@menu/top_menu2"
         app:theme="@style/MyActionBarTheme"
+        app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
         app:titleTextColor="#D8CDCD" />
 
-    <org.osmdroid.views.MapView
-        android:id="@+id/map"
+    <View
+        android:id="@+id/divider"
         android:layout_width="match_parent"
-        android:layout_height="562dp"
-        app:layout_constraintBottom_toTopOf="@+id/tvAddress"
+        android:layout_height="1dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        android:background="?android:attr/listDivider"
+        app:layout_constraintBottom_toTopOf="@+id/recyclerview"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"></org.osmdroid.views.MapView>
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textView" />
 
     <TextView
-        android:id="@+id/tvAddress"
-        android:layout_width="match_parent"
+        android:id="@+id/textView"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:backgroundTint="@color/material_on_background_disabled"
-        android:paddingStart="20dp"
-        android:paddingTop="10dp"
-        android:paddingEnd="20dp"
-        android:paddingBottom="10dp"
-        android:text="@string/textview"
-        android:textAlignment="center"
-        android:textAppearance="@style/TextAppearance.AppCompat.Body2"
-        android:textColor="#757575"
-        android:textSize="12sp"
-        android:visibility="visible"
+        android:layout_marginTop="8dp"
+        android:text="My Planned Routes"
+        android:textSize="30sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/my_toolbar3" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerview"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         app:layout_constraintBottom_toTopOf="@+id/bottom_nav"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        tools:visibility="visible" />
+        app:layout_constraintTop_toBottomOf="@+id/divider" />
 
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottom_nav"
@@ -65,6 +70,4 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:menu="@menu/bottom_menu" />
-
-
 </androidx.constraintlayout.widget.ConstraintLayout>

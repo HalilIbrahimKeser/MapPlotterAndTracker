@@ -15,6 +15,7 @@ public class ViewModel extends AndroidViewModel {
     private final Repository mRepository;
     public LiveData<List<Trip>> mAllTrips;
     public LiveData<Trip> mCurrentTrip;
+    public MutableLiveData<Trip> mCurentHiking;
     public Trip mTrip;
 
     public ViewModel(Application application) {
@@ -35,6 +36,24 @@ public class ViewModel extends AndroidViewModel {
         return mCurrentTrip;
     }
 
+    public Repository getmRepository() { return mRepository; }
+
+    public LiveData<List<Trip>> getmAllTrips() { return mAllTrips; }
+
+    public void setmAllTrips(LiveData<List<Trip>> mAllTrips) { this.mAllTrips = mAllTrips; }
+
+    public LiveData<Trip> getmCurrentTrip() { return mCurrentTrip; }
+
+    public void setmCurrentTrip(LiveData<Trip> mCurrentTrip) { this.mCurrentTrip = mCurrentTrip; }
+
+    public MutableLiveData<Trip> getmCurentHiking() { return mCurentHiking; }
+
+    public void setmCurentHiking(MutableLiveData<Trip> mCurentHiking) { this.mCurentHiking = mCurentHiking; }
+
+    public Trip getmTrip() { return mTrip; }
+
+    public void setmTrip(Trip mTrip) { this.mTrip = mTrip; }
+
     public LiveData<List<Trip>> getSingleTrip(int mTripID) {
         mTrip = mRepository.getSingleTrip(mTripID).getValue().get(0);
         return mRepository.getSingleTrip(mTripID);
@@ -47,5 +66,4 @@ public class ViewModel extends AndroidViewModel {
     public LiveData<Trip> getTrip(int mTripId) {
         return mRepository.getTrip(mTripId);
     }
-
 }

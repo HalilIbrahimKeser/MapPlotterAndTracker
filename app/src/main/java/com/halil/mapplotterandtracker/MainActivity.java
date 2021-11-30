@@ -1,6 +1,7 @@
 package com.halil.mapplotterandtracker;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -9,8 +10,6 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.location.Address;
-import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -30,6 +29,8 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.res.ResourcesCompat;
 
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.navigation.NavigationBarView;
 import com.halil.mapplotterandtracker.Entities.Trip;
 import com.halil.mapplotterandtracker.Repository.Repository;
 import com.halil.mapplotterandtracker.databinding.ActivityMainBinding;
@@ -49,60 +50,54 @@ import org.osmdroid.views.overlay.Marker;
 import org.osmdroid.views.overlay.Polyline;
 import org.osmdroid.views.overlay.compass.CompassOverlay;
 import org.osmdroid.views.overlay.compass.InternalCompassOrientationProvider;
+import org.osmdroid.views.overlay.infowindow.InfoWindow;
+import org.osmdroid.views.overlay.milestones.MilestoneManager;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity implements LocationListener, SensorEventListener, MapEventsReceiver {
 
-    // Permissions
-    private final String[] PERMISSIONS = {
-            Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE};
-    private static final int REQUEST_CODE_ASK_PERMISSIONS = 123;
-
-    // Binding
+    // Binding and context
     ActivityMainBinding binding;
-
+    public Context context;
+    // Repo
+    private Repository mRepository;
+    // Helper
+    Helper helper = new Helper();
+    MapHelper mapHelper = new MapHelper();
     // Views
     TextView tvAddress;
-
-    // SENSOR ----------------
+    // Sensors
     SensorManager sensorManager;
     Sensor accelerometerSensor;
     Boolean accelerometerSensorChanged = false;
-
-    // LOCATION ---------------------
+    // Location
     LocationManager locationManager;
     RoadManager roadManager = new OSRMRoadManager(this, MY_USER_AGENT);
     private static final String MY_USER_AGENT = "Halil007";
 
-    // MAP ---------------------
-    MapView mapViewOsm;
-    IMapController mapController;
-    MapEventsOverlay mMapEventsOverlay;
-    Polyline roadOverlay;
-    CompassOverlay mCompassOverlay;
-    ArrayList<GeoPoint> waypoints;
-    Road road;
-    Marker nodeMarker;
-    RoadNode node;
-    GeoPoint clickLocation;
-    GeoPoint currentPoint;
-    GeoPoint startPoint;
-    GeoPoint endPoint;
-    Marker currentMarker;
-    Marker startMarker;
-    Marker endMarker;
-    boolean trackingStartet = true;
-    Trip trip;
+    // Map
+    public MapView mapViewOsm;
+    public IMapController mapController;
+    public MapEventsOverlay mMapEventsOverlay;
+    public Polyline roadOverlay;
+    public CompassOverlay mCompassOverlay;
+    public ArrayList<GeoPoint> waypoints;
+    public Road road;
+    public Marker nodeMarker;
+    public RoadNode node;
+    public GeoPoint clickLocation;
+    public GeoPoint currentPoint;
+    public GeoPoint startPoint;
+    public GeoPoint endPoint;
+    public Marker currentMarker;
+    public Marker startMarker;
+    public Marker endMarker;
+    boolean positionsSet = false;
+    boolean trackingStartet = false;
+    public Trip trip;
     int timer = 0;
-    Context context;
-
-    // REPO -------------------
-    private Repository mRepository;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -122,6 +117,33 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         setSupportActionBar(myToolbar);
         //Objects.requireNonNull(getSupportActionBar()).setDisplayShowTitleEnabled(false);
 
+        // Buttom Navigation
+        BottomNavigationView bottomNav = binding.bottomNav;
+        bottomNav.setSelectedItemId(R.id.main);
+        bottomNav.setOnItemSelectedListener(item -> {
+            Intent intent;
+            switch (item.getItemId()) {
+                case R.id.main:
+                    intent = new Intent(context, MainActivity.class);
+                    startActivity(intent);
+                    return true;
+                case R.id.plannedTrips:
+                    intent = new Intent(context, PlanedRoutesActivity.class);
+                    startActivity(intent);
+                    return true;
+                case R.id.recordedTrips:
+                    intent = new Intent(context, RecordedTripsActivity.class);
+                    startActivity(intent);
+                    return true;
+                case R.id.userSettings:
+                    intent = new Intent(context, SettingsActivity.class);
+                    startActivity(intent);
+                    return true;
+            }
+            return false;
+        });
+
+
         // Sensors
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         accelerometerSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
@@ -130,6 +152,9 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         // Repo
         mRepository = new Repository(getApplication());
 
+        // Location
+
+        // Get info from the intent extra
         Bundle bundle = getIntent().getExtras();
         if(bundle != null) {
             // If there is intent extra, than go to method to show the trip from the intent of SavedRoutesActivity
@@ -140,8 +165,8 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         initMap();
 
         // Testing / Deleting
-//        mRepository.deleteTrip(8);
-//        mRepository.deleteTrip(9);
+        // mRepository.deleteTrip(3); mRepository.deleteTrip(4); mRepository.deleteTrip(5);
+        // mRepository.deleteTrip(6);mRepository.deleteTrip(7); mRepository.deleteTrip(8); mRepository.deleteTrip(9);
     }
 
     private void initMap() {
@@ -164,10 +189,6 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         mapViewOsm.getOverlays().add(mCompassOverlay);
 
         // Permissions
-        if (!hasPermissions(this, PERMISSIONS)) {
-            ActivityCompat.requestPermissions(this, PERMISSIONS, 123);
-        }
-        // får feil melding når denne permission ikke er lagt til
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
                 ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return;
@@ -204,7 +225,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     public boolean singleTapConfirmedHelper(GeoPoint point) {
         clickLocation = new GeoPoint(point.getLatitude(), point.getLongitude());
 
-        if (trackingStartet) {
+        if (!trackingStartet && !positionsSet) {
             if (waypoints.size() == 0) {
                 startPoint = clickLocation;
                 waypoints.add(startPoint);
@@ -226,7 +247,8 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
                 endMarker.setTitle("End point");
                 mapViewOsm.getOverlays().add(endMarker);
                 // Now we have to points and can draw the road beetween and update the map
-                drawTrackingline();
+                positionsSet = true;
+                mapHelper.drawPlannedTrackingline(context, waypoints, positionsSet, trackingStartet, road, roadManager, roadOverlay, mapViewOsm, node, nodeMarker);
 
             } else {
                 Toast.makeText(this, "Remove the waypoints", Toast.LENGTH_SHORT).show();
@@ -244,87 +266,16 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         return false;
     }
 
-    private void drawTrackingline() {
-        // https://github.com/MKergall/osmbonuspack
-
-        if (waypoints.size() >= 2 && trackingStartet) {
-            Thread thread = new Thread(() -> {
-                try {
-                    // Road between points
-                    road = roadManager.getRoad(waypoints);
-
-                    // Build a Polyline with the route shape
-                    roadOverlay = RoadManager.buildRoadOverlay(road);
-                    roadOverlay.setGeodesic(true);
-
-                    // Add this Polyline to the overlays to the map
-                    if (road.mNodes.size() > 0) {
-                        mapViewOsm.getOverlays().add(roadOverlay);
-                    } else {
-                        Toast.makeText(context, "No nodes to draw, fail in roadManager", Toast.LENGTH_SHORT).show();
-                    }
-
-                    // Adds nodes to the rode
-                    Drawable nodeIcon = ResourcesCompat.getDrawable(getResources(), R.drawable.markernode, null);
-                    for (int i = 0; i < road.mNodes.size(); i++) {
-                        node = road.mNodes.get(i);
-                        nodeMarker = new Marker(mapViewOsm);
-                        nodeMarker.setPosition(node.mLocation);
-                        nodeMarker.setIcon(nodeIcon);
-                        nodeMarker.setTitle("Step " + i);
-                        mapViewOsm.getOverlays().add(nodeMarker);
-
-                        nodeMarker.setSnippet(node.mInstructions);
-                        nodeMarker.setSubDescription(Road.getLengthDurationText(this, node.mLength, node.mDuration));
-                        Drawable icon = ResourcesCompat.getDrawable(getResources(), R.mipmap.continueicon, null);
-                        nodeMarker.setImage(icon);
-                    }
-
-                    // Update map
-                    mapViewOsm.invalidate();
-
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            });
-            thread.start();
-        } else {
-            Toast.makeText(this, "Push start to track", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    private void saveTrip() {
-        // Create a trip and save it to file
-        if (waypoints.size() != 0 && road.mNodes.size() != 0) {
-            String mFromAdress = getLocationInformation(waypoints.get(0).getLatitude(), waypoints.get(0).getLongitude());
-            String mToAdress = getLocationInformation(waypoints.get(1).getLatitude(), waypoints.get(1).getLongitude());
-            double mLength = road.mLength;
-            double mNodes = road.mNodes.size();
-            double mDuration = road.mLength;
-            double mElevation = Math.max(waypoints.get(0).getAltitude(), waypoints.get(1).getAltitude());
-            double mStartPointLat = waypoints.get(0).getLatitude();
-            double mStartPointLong = waypoints.get(0).getLongitude();
-            double mEndPointLat = waypoints.get(1).getLatitude();
-            double mEndPointLong = waypoints.get(1).getLongitude();
-            trip = new Trip(mFromAdress, mToAdress, mLength, mNodes, mDuration, mElevation, mStartPointLat, mStartPointLong, mEndPointLat, mEndPointLong);
-
-            // Save trip
-            mRepository.tripInsert(trip);
-
-            Toast.makeText(this, "Trip saved", Toast.LENGTH_LONG).show();
-        } else {
-            Toast.makeText(this, "No trip to save. Create a trip first", Toast.LENGTH_SHORT).show();
-        }
-    }
-
     @Override
     public void onLocationChanged(@NonNull Location location) {
-        String locinfo = getLocationInformation(location.getLatitude(), location.getLongitude());
+        String locinfo = helper.getLocationInformation(context, location.getLatitude(), location.getLongitude());
         tvAddress.setText(locinfo);
 
         currentPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
 
-        if (accelerometerSensorChanged) {
+        if (accelerometerSensorChanged && trackingStartet && positionsSet) {
+            mapHelper.setPositionToCurrentLocation(context, currentPoint, currentMarker, mapController, mapViewOsm);
+
             // Refresh the map!
             mapViewOsm.invalidate();
         }
@@ -351,11 +302,12 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     public void onAccuracyChanged(Sensor sensor, int i) {
     }
 
+    @SuppressLint("NonConstantResourceId")
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.menu_reset:
-                setPositionToCurrentLocation();
+                mapHelper.setPositionToCurrentLocation(context, currentPoint, currentMarker, mapController, mapViewOsm);
                 return true;
             case R.id.menu_start:
                 startProgram();
@@ -364,10 +316,10 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
                 stopProgram();
                 return true;
             case R.id.menu_save:
-                saveTrip();
+                mapHelper.saveTrip(context, mRepository, waypoints, road, roadManager);
                 return true;
             case R.id.menu_show_saved_routes:
-                Intent intent = new Intent(this, SavedRoutesActivity.class);
+                Intent intent = new Intent(this, PlanedRoutesActivity.class);
                 startActivity(intent);
                 return true;
             case R.id.menu_quit:
@@ -435,53 +387,8 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
             mapViewOsm.getOverlays().add(endMarker);
 
             trackingStartet = true;
-            drawTrackingline();
+            mapHelper.drawPlannedTrackingline(context, waypoints, positionsSet, trackingStartet, road, roadManager, roadOverlay, mapViewOsm, node, nodeMarker);
         }
-    }
-
-    private static boolean hasPermissions(Context context, String... perm) {
-        if (context != null && perm != null) {
-            for (String p : perm) {
-                if (ActivityCompat.checkSelfPermission(context, p) != PackageManager.PERMISSION_GRANTED) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    private void setPositionToCurrentLocation() {
-        if (currentPoint != null) {
-            currentMarker.setPosition(currentPoint);
-            currentMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
-            currentMarker.setIcon(ResourcesCompat.getDrawable(getResources(), R.drawable.currentposicon, null));
-            currentMarker.setTitle("Your position");
-            mapController.setCenter(currentPoint);
-
-            mapViewOsm.getOverlays().add(currentMarker);
-        }
-    }
-
-    private String getLocationInformation(double lat, double lng) {
-        Geocoder geocoder = new Geocoder(this, Locale.getDefault());
-        try {
-            List<Address> addresses = geocoder.getFromLocation(lat, lng, 1);
-            Address obj = addresses.get(0);
-            String add = obj.getAddressLine(0);
-//            add = add + "\n" + obj.getCountryName();
-//            add = add + "\n" + obj.getCountryCode();
-//            add = add + "\n" + obj.getAdminArea();
-//            add = add + "\n" + obj.getPostalCode();
-//            add = add + "\n" + obj.getSubAdminArea();
-//            add = add + "\n" + obj.getLocality();
-//            add = add + "\n" + obj.getSubThoroughfare();
-
-            return add;
-        } catch (IOException e) {
-            e.printStackTrace();
-            Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
-        }
-        return null;
     }
 
     private void startProgram() {
@@ -506,4 +413,5 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     private void doQuit(MenuItem item) {
         this.finish();
     }
+
 }

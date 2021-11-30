@@ -1,11 +1,11 @@
 <resources>
-    <string name="app_name">Map - A4 </string>
+    <string name="app_name">Tough-Hike</string>
     <string name="textview">Your current possition will appear here</string>
     <string name="reset_map">Reset map</string>
     <string name="slett">Slett</string>
     <string name="string_slett" />
-    <string name="save_route">Save route</string>
-    <string name="showe_saved_routes">Show saved routes</string>
+    <string name="save_route">Save planned route</string>
+    <string name="showe_saved_routes">Show saved planned routes</string>
     <string name="exit">Exit</string>
     <string name="no_data_yet">No data yet</string>
 </resources>

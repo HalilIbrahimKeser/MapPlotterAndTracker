@@ -1,11 +1,27 @@
 package com.halil.mapplotterandtracker;
 
+import android.content.Context;
+import android.location.Address;
+import android.location.Geocoder;
 import android.util.Log;
+import android.widget.Toast;
 
+import com.halil.mapplotterandtracker.Entities.Trip;
+import com.halil.mapplotterandtracker.Repository.Repository;
+
+import org.osmdroid.bonuspack.routing.Road;
+import org.osmdroid.bonuspack.routing.RoadManager;
+import org.osmdroid.util.GeoPoint;
+import org.osmdroid.views.overlay.Polyline;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 public class Helper {
 
+    // Degrees to UTM. From Example of the teacher Aleksander
     static class Deg2UTM
     {
         double Easting;
@@ -67,6 +83,7 @@ public class Helper {
         }
     }
 
+    // UTM to degrees. From Example of the teacher Aleksander
     class UTM2Deg
     {
         double latitude;
@@ -95,5 +112,28 @@ public class Helper {
             longitude=Math.round(longitude*10000000);
             longitude=longitude/10000000;
         }
+    }
+
+    // String with location information. From Example of the teacher Aleksander
+    public String getLocationInformation(Context context, double lat, double lng) {
+        Geocoder geocoder = new Geocoder(context, Locale.getDefault());
+        try {
+            List<Address> addresses = geocoder.getFromLocation(lat, lng, 1);
+            Address obj = addresses.get(0);
+            String add = obj.getAddressLine(0);
+//            add = add + "\n" + obj.getCountryName();
+//            add = add + "\n" + obj.getCountryCode();
+//            add = add + "\n" + obj.getAdminArea();
+//            add = add + "\n" + obj.getPostalCode();
+//            add = add + "\n" + obj.getSubAdminArea();
+//            add = add + "\n" + obj.getLocality();
+//            add = add + "\n" + obj.getSubThoroughfare();
+
+            return add;
+        } catch (IOException e) {
+            e.printStackTrace();
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return null;
     }
 }

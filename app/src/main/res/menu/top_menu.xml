@@ -8,7 +8,7 @@
         android:id="@+id/menu_reset"
         android:checkable="false"
         android:checked="false"
-        android:icon="@drawable/reset"
+        android:icon="@drawable/currentposicon_yellow"
         android:title="@string/reset_map"
         android:visible="true"
         app:showAsAction="always" />
