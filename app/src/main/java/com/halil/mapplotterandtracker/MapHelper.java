@@ -56,18 +56,14 @@ public class MapHelper {
     }
 
     public void drawPlannedTrackingline(Context context1, ArrayList<GeoPoint> waypoints1, boolean positionsSet1, boolean trackingStartet1,
-                                        Road road1, RoadManager roadManager1, Polyline roadOverlay1, MapView mapViewOsm1, RoadNode node1, Marker nodeMarker1) {
+                                        RoadManager roadManager1, MapView mapViewOsm1, Marker nodeMarker1) {
         // start kode fra https://github.com/MKergall/osmbonuspack
-
         context = context1;
         waypoints = waypoints1;
         positionsSet = positionsSet1;
         trackingStartet = trackingStartet1;
-        road = road1;
         roadManager = roadManager1;
-        roadOverlay = roadOverlay1;
         mapViewOsm = mapViewOsm1;
-        node = node1;
         nodeMarker = nodeMarker1;
 
         if (waypoints.size() >= 2 && positionsSet) {
@@ -156,7 +152,7 @@ public class MapHelper {
 
                         Trip.StartGeo startGeo = new Trip.StartGeo(mStartPointLat, mStartPointLong);
                         Trip.StopGeo stopGeo = new Trip.StopGeo(mEndPointLat, mEndPointLong);
-                        Trip trip = new Trip(mFromAdress, mToAdress, mLength, mNodes, mDuration, mDistance, mElevation, startGeo, stopGeo);
+                        Trip trip = new Trip(mFromAdress, mToAdress, mLength, mNodes, mDuration, mDistance, mElevation, startGeo, stopGeo, false);
 
                         // Save trip
                         mRepository.tripInsert(trip);

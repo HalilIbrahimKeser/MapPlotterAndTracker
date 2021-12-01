@@ -5,7 +5,6 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.drawable.Drawable;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -21,20 +20,18 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.res.ResourcesCompat;
-
+import androidx.lifecycle.ViewModelProvider;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
-import com.google.android.material.navigation.NavigationBarView;
 import com.halil.mapplotterandtracker.Entities.Trip;
 import com.halil.mapplotterandtracker.Repository.Repository;
+import com.halil.mapplotterandtracker.VievModel.ViewModel;
 import com.halil.mapplotterandtracker.databinding.ActivityMainBinding;
-
 import org.osmdroid.api.IMapController;
 import org.osmdroid.bonuspack.routing.OSRMRoadManager;
 import org.osmdroid.bonuspack.routing.Road;
@@ -50,9 +47,6 @@ import org.osmdroid.views.overlay.Marker;
 import org.osmdroid.views.overlay.Polyline;
 import org.osmdroid.views.overlay.compass.CompassOverlay;
 import org.osmdroid.views.overlay.compass.InternalCompassOrientationProvider;
-import org.osmdroid.views.overlay.infowindow.InfoWindow;
-import org.osmdroid.views.overlay.milestones.MilestoneManager;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -61,6 +55,9 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     // Binding and context
     ActivityMainBinding binding;
     public Context context;
+    // ViewModel
+    private ViewModel mViewModel;
+    Trip mCurentHiking;
     // Repo
     private Repository mRepository;
     // Helper
@@ -99,6 +96,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     public Trip trip;
     int timer = 0;
 
+    @SuppressLint("NonConstantResourceId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -109,13 +107,12 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         context = getApplicationContext();
         Configuration.getInstance().load(context, PreferenceManager.getDefaultSharedPreferences(context));
 
-        //Init views
+        // Text views
         tvAddress = binding.tvAddress;
 
         // Toolbar
         Toolbar myToolbar = binding.myToolbar;
         setSupportActionBar(myToolbar);
-        //Objects.requireNonNull(getSupportActionBar()).setDisplayShowTitleEnabled(false);
 
         // Buttom Navigation
         BottomNavigationView bottomNav = binding.bottomNav;
@@ -143,6 +140,8 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
             return false;
         });
 
+        // View model
+        mViewModel = new ViewModelProvider(this).get(ViewModel.class);
 
         // Sensors
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
@@ -152,12 +151,9 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         // Repo
         mRepository = new Repository(getApplication());
 
-        // Location
-
-        // Get info from the intent extra
+        // If there is intent extra, than go to method to show the trip from the intent of SavedRoutesActivity
         Bundle bundle = getIntent().getExtras();
         if(bundle != null) {
-            // If there is intent extra, than go to method to show the trip from the intent of SavedRoutesActivity
             setTheTripFromIntentExtra();
         }
 
@@ -165,8 +161,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         initMap();
 
         // Testing / Deleting
-        // mRepository.deleteTrip(3); mRepository.deleteTrip(4); mRepository.deleteTrip(5);
-        // mRepository.deleteTrip(6);mRepository.deleteTrip(7); mRepository.deleteTrip(8); mRepository.deleteTrip(9);
+        // mRepository.deleteTrip(3); mRepository.deleteTrip(4); mRepository.deleteTrip(5);mRepository.deleteTrip(6);
     }
 
     private void initMap() {
@@ -209,6 +204,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
             currentPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
         }
         mapController.setCenter(currentPoint);
+        assert location != null;
         double latitude = location.getLatitude();
         double longitude = location.getLongitude();
         LatLng currentPosition = new LatLng(latitude, longitude);
@@ -248,7 +244,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
                 mapViewOsm.getOverlays().add(endMarker);
                 // Now we have to points and can draw the road beetween and update the map
                 positionsSet = true;
-                mapHelper.drawPlannedTrackingline(context, waypoints, positionsSet, trackingStartet, road, roadManager, roadOverlay, mapViewOsm, node, nodeMarker);
+                mapHelper.drawPlannedTrackingline(context, waypoints, true, trackingStartet, roadManager, mapViewOsm, nodeMarker);
 
             } else {
                 Toast.makeText(this, "Remove the waypoints", Toast.LENGTH_SHORT).show();
@@ -337,37 +333,17 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     }
 
     private void setTheTripFromIntentExtra() {
-        // Intent extras
-        String stringTripID;
-        String stringmStartPointLat;
-        String stringmStartPointLong;
-        String stringmEndPointLat;
-        String stringmEndPointLong;
+        mCurentHiking = mViewModel.getCurrentTrip().getValue();
+        Intent intent = getIntent();
+        Bundle args = intent.getBundleExtra("bundle");
+        List<Trip> trip = (ArrayList<Trip>) args.getSerializable("arraylist");
 
-        // values to get from the intent extra strings
-        double startPointLat;
-        double startPointLong;
-        double endPointLat;
-        double endPointLong;
-
-        stringTripID = getIntent().getStringExtra("TripID");
-        stringmStartPointLat = getIntent().getStringExtra("mStartPointLat");
-        stringmStartPointLong = getIntent().getStringExtra("mStartPointLong");
-        stringmEndPointLat = getIntent().getStringExtra("mEndPointLat");
-        stringmEndPointLong = getIntent().getStringExtra("mEndPointLong");
-
-        if(stringTripID == null) {
+        if(trip.size() == 0) {
             return;
-        }
+        }else {
+            GeoPoint start = new GeoPoint(trip.get(0).startGeo.mStartPointLat, trip.get(0).startGeo.mStartPointLong);
+            GeoPoint end = new GeoPoint(trip.get(0).stopGeo.mEndPointLat, trip.get(0).stopGeo.mEndPointLong);
 
-        startPointLat = Double.parseDouble(stringmStartPointLat);
-        startPointLong = Double.parseDouble(stringmStartPointLong);
-        endPointLat = Double.parseDouble(stringmEndPointLat);
-        endPointLong = Double.parseDouble(stringmEndPointLong);
-
-        if(startPointLat != 0) {
-            GeoPoint start = new GeoPoint(startPointLat, startPointLong);
-            GeoPoint end = new GeoPoint(endPointLat, endPointLong);
             initMap();
 
             startPoint = start;
@@ -385,9 +361,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
             endMarker.setIcon(ResourcesCompat.getDrawable(getResources(), R.drawable.endicon, null));
             endMarker.setTitle("End point");
             mapViewOsm.getOverlays().add(endMarker);
-
-            trackingStartet = true;
-            mapHelper.drawPlannedTrackingline(context, waypoints, positionsSet, trackingStartet, road, roadManager, roadOverlay, mapViewOsm, node, nodeMarker);
+            mapHelper.drawPlannedTrackingline(context, waypoints, true, trackingStartet, roadManager, mapViewOsm, nodeMarker);
         }
     }
 
@@ -406,6 +380,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
             // Init map again
             initMap();
 
+            positionsSet = false;
             trackingStartet = false;
         }
     }

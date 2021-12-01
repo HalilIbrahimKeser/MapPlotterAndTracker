@@ -7,12 +7,14 @@ import androidx.room.Database;
 import androidx.room.Room;
 import androidx.sqlite.db.SupportSQLiteDatabase;
 
+import com.halil.mapplotterandtracker.Entities.Locations;
 import com.halil.mapplotterandtracker.Entities.Trip;
+import com.halil.mapplotterandtracker.Entities.UserInfo;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-@Database(entities = {Trip.class}, version = 1, exportSchema = false)
+@Database(entities = {Trip.class, UserInfo.class, Locations.class}, version = 1, exportSchema = false)
 public abstract class RoomDatabase extends androidx.room.RoomDatabase {
 
     public abstract Dao Dao();
@@ -48,7 +50,7 @@ public abstract class RoomDatabase extends androidx.room.RoomDatabase {
                 //Dummy Trip
                 Trip.StartGeo startGeo = new Trip.StartGeo(59.948376, 11.007322);
                 Trip.StopGeo stopGeo = new Trip.StopGeo(11.007322, 59.943497);
-                Trip trip =  new Trip("Home", "Job", 0.5, 10, 50, 20,50, startGeo, stopGeo);
+                Trip trip =  new Trip("Home", "Job", 0.5, 10, 50, 20,50, startGeo, stopGeo, false);
 
                 dao.tripInsert(trip);
 

@@ -1,21 +1,29 @@
 package com.halil.mapplotterandtracker.Entities;
 
+import static androidx.room.ForeignKey.CASCADE;
+
 import androidx.annotation.NonNull;
 import androidx.room.ColumnInfo;
 import androidx.room.Embedded;
 import androidx.room.Entity;
+import androidx.room.ForeignKey;
+import androidx.room.Index;
 import androidx.room.PrimaryKey;
-
-import org.osmdroid.util.GeoPoint;
-
 import java.io.Serializable;
 
-@Entity(tableName = "trip_table")
-public class Trip implements Serializable {
+@Entity(tableName = "trip_table",
+    indices = {@Index("mTripId")},
+            foreignKeys = {@ForeignKey(entity = UserInfo.class,
+            parentColumns = "userinfoID",
+            childColumns = "mTripId",
+            onDelete = CASCADE)})
 
+public class Trip implements Serializable {
     @PrimaryKey(autoGenerate = true)
     @NonNull
     @ColumnInfo(name = "mTripId") public int mTripId;
+
+    @ColumnInfo(name = "userinfoID") public int mUserinfoID;
 
     @ColumnInfo(name = "mFromAddress") public String mFromAddress;
 
@@ -40,7 +48,7 @@ public class Trip implements Serializable {
     public Trip(String mFromAddress, String mToAddress,
                 double mLength, double mNodes,
                 double mDuration, double mDistance, double mElevation,
-                StartGeo startGeo, StopGeo stopGeo) {
+                StartGeo startGeo, StopGeo stopGeo, Boolean mIsFinished) {
         this.mFromAddress = mFromAddress;
         this.mToAddress = mToAddress;
         this.mLength = mLength;
@@ -52,7 +60,7 @@ public class Trip implements Serializable {
         this.stopGeo = stopGeo;
     }
 
-    public static class StartGeo {
+    public static class StartGeo implements Serializable {
         public double mStartPointLat;
         public double mStartPointLong;
 
@@ -67,7 +75,7 @@ public class Trip implements Serializable {
         public void setmStartPointLong(double mStartPointLong) { this.mStartPointLong = mStartPointLong; }
     }
 
-    public static class StopGeo {
+    public static class StopGeo implements Serializable{
         public double mEndPointLat;
         public double mEndPointLong;
 

@@ -3,11 +3,13 @@ package com.halil.mapplotterandtracker;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.view.LayoutInflater;
+import android.widget.Button;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.halil.mapplotterandtracker.databinding.ActivityMainBinding;
@@ -22,6 +24,9 @@ public class SettingsActivity extends AppCompatActivity {
     ActivitySettingsBinding binding;
     public Context context;
 
+    Button btSavePerson;
+
+    @SuppressLint("NonConstantResourceId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -64,6 +69,8 @@ public class SettingsActivity extends AppCompatActivity {
             return false;
         });
 
+        btSavePerson = binding.btSavePerson;
+        ///binding.
 
     }
 }

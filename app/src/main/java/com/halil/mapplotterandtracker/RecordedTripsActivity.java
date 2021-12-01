@@ -1,5 +1,6 @@
 package com.halil.mapplotterandtracker;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -19,20 +20,22 @@ import com.halil.mapplotterandtracker.Entities.Trip;
 import com.halil.mapplotterandtracker.VievModel.ViewModel;
 import com.halil.mapplotterandtracker.databinding.ActivityRecordedTripsBinding;
 
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 public class RecordedTripsActivity extends AppCompatActivity {
 
-    private static Trip trip;
     ActivityRecordedTripsBinding binding;
     Intent intent;
     Context context;
     RecyclerView recyclerView;
-
-    // View model
     ViewModel mViewModel;
     AdapterClass adapter;
+    Trip mCurentHiking;
 
+    @SuppressLint("NonConstantResourceId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -73,7 +76,6 @@ public class RecordedTripsActivity extends AppCompatActivity {
             return false;
         });
 
-
         // Recyclerview
         recyclerView = binding.recyclerview;
 
@@ -84,28 +86,17 @@ public class RecordedTripsActivity extends AppCompatActivity {
             recyclerView.setAdapter(adapter);
             recyclerView.setLayoutManager(new LinearLayoutManager(context));
             adapter.setClickListener((view, position) -> {
+                mCurentHiking = trips.get(position);
+                mViewModel.getCurrentTrip().postValue(mCurentHiking);
 
-//                MutableLiveData<Trip> trip = new Trip();
-//                String mFromAddress,
-//                String mToAddress,
-//                double mLength,
-//                double mNodes,
-//                double mDuration,
-//                double mDistance,
-//                double mElevation,
-//                double mStartPointLat,
-//                double mStartPointLong,
-//                double mEndPointLat,
-//                double mEndPointLong
-//
-//
-//                mViewModel.setmCurentHiking(trip);
                 Intent intent = new Intent(context, MainActivity.class);
-                intent.putExtra("TripID", String.valueOf(trips.get(position).mTripId));
-                intent.putExtra("mStartPointLat", String.valueOf(trips.get(position).startGeo.mStartPointLat));
-                intent.putExtra("mStartPointLong", String.valueOf(trips.get(position).startGeo.mStartPointLong));
-                intent.putExtra("mEndPointLat", String.valueOf(trips.get(position).stopGeo.mEndPointLat));
-                intent.putExtra("mEndPointLong", String.valueOf(trips.get(position).stopGeo.mEndPointLong));
+                Bundle args = new Bundle();
+
+                List<Trip> list = new ArrayList<Trip>();
+                list.add(mCurentHiking);
+
+                args.putSerializable("arraylist", (Serializable) list);
+                intent.putExtra("bundle", args);
                 startActivity(intent);
             });
         });

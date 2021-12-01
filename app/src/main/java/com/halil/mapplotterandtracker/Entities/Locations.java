@@ -8,8 +8,7 @@ import androidx.room.PrimaryKey;
 import java.io.Serializable;
 
 @Entity(tableName = "location_table")
-public class Location implements Serializable {
-
+public class Locations implements Serializable {
     @PrimaryKey(autoGenerate = true)
     @NonNull
     @ColumnInfo(name = "locationID") public int mLocationID;
@@ -26,7 +25,7 @@ public class Location implements Serializable {
 
     @ColumnInfo(name = "Zone") public double Zone;
 
-    public Location(double mLatitude, double mLongitude, double mEasting, double mNorthing, String mLetter, double Zone ) {
+    public Locations(double mLatitude, double mLongitude, double mEasting, double mNorthing, String mLetter, double Zone ) {
         this.mLatitude = mLatitude;
         this.mLongitude = mLongitude;
         this.mEasting = mEasting;

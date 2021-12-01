@@ -29,11 +29,11 @@ public class ViewModel extends AndroidViewModel {
         mRepository.tripInsert(trip);
     }
 
-    public LiveData<Trip> getCurrentTrip() {
-        if (mCurrentTrip == null) {
-            mCurrentTrip = new MutableLiveData<>();
+    public MutableLiveData<Trip> getCurrentTrip() {
+        if (mCurentHiking == null) {
+            mCurentHiking = new MutableLiveData<>();
         }
-        return mCurrentTrip;
+        return mCurentHiking;
     }
 
     public Repository getmRepository() { return mRepository; }
