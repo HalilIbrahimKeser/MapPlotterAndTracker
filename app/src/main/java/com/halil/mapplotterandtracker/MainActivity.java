@@ -28,6 +28,7 @@ import androidx.core.content.res.ResourcesCompat;
 import androidx.lifecycle.ViewModelProvider;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.halil.mapplotterandtracker.Entities.Locations;
 import com.halil.mapplotterandtracker.Entities.Trip;
 import com.halil.mapplotterandtracker.Repository.Repository;
 import com.halil.mapplotterandtracker.VievModel.ViewModel;
@@ -70,6 +71,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     Sensor accelerometerSensor;
     Boolean accelerometerSensorChanged = false;
     // Location
+    Location location;
     LocationManager locationManager;
     RoadManager roadManager = new OSRMRoadManager(this, MY_USER_AGENT);
     private static final String MY_USER_AGENT = "Halil007";
@@ -191,7 +193,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
 
         // Last location
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, this);
-        Location location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+        location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
 
         // Set-up start and end points
         waypoints = new ArrayList<>();
@@ -216,6 +218,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
 
         Helper.Deg2UTM curUTM = new Helper.Deg2UTM(currentPosition.latitude, currentPosition.longitude);
     }
+
 
     @Override
     public boolean singleTapConfirmedHelper(GeoPoint point) {
@@ -271,7 +274,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
 
         if (accelerometerSensorChanged && trackingStartet && positionsSet) {
             mapHelper.setPositionToCurrentLocation(context, currentPoint, currentMarker, mapController, mapViewOsm);
-
+            mapHelper.drawHikeTrackingline(context, mRepository, location, waypoints, true, true, roadManager, mapViewOsm, nodeMarker);
             // Refresh the map!
             mapViewOsm.invalidate();
         }
@@ -367,22 +370,33 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
 
     private void startProgram() {
         trackingStartet = true;
+        if (positionsSet) {
+            mapHelper.drawHikeTrackingline(context, mRepository, location, waypoints, true, true, roadManager, mapViewOsm, nodeMarker);
+        } else {
+            Toast.makeText(this, "Create a start and end point", Toast.LENGTH_SHORT).show();
+        }
+
     }
 
     private void stopProgram() {
-        if (waypoints.size() == 2) {
-            waypoints.remove(startPoint);
-            waypoints.remove(endPoint);
+        if(waypoints != null) {
+            if (waypoints.size() == 2) {
+                waypoints.remove(startPoint);
+                waypoints.remove(endPoint);
 
-            // Remove all overlays
-            mapViewOsm.getOverlays().clear();
+                // Remove all overlays
+                mapViewOsm.getOverlays().clear();
 
-            // Init map again
-            initMap();
+                // Init map again
+                initMap();
 
-            positionsSet = false;
-            trackingStartet = false;
+                positionsSet = false;
+                trackingStartet = false;
+            }
+        }else {
+            Toast.makeText(this, "Gps fail", Toast.LENGTH_SHORT).show();
         }
+
     }
 
     private void doQuit(MenuItem item) {

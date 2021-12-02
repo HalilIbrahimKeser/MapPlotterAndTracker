@@ -47,10 +47,14 @@ public abstract class RoomDatabase extends androidx.room.RoomDatabase {
                 Dao dao = INSTANCE.Dao();
                 dao.deleteAlltrips();
 
+                //User
+                UserInfo userInfo = new UserInfo(1, "Halil", 1983, 90, 0,0);
+                dao.userInfoInsert(userInfo);
+
                 //Dummy Trip
                 Trip.StartGeo startGeo = new Trip.StartGeo(59.948376, 11.007322);
                 Trip.StopGeo stopGeo = new Trip.StopGeo(11.007322, 59.943497);
-                Trip trip =  new Trip("Home", "Job", 0.5, 10, 50, 20,50, startGeo, stopGeo, false);
+                Trip trip =  new Trip(1,"Home", "Job", 0.5, 10, 50, 20,50, startGeo, stopGeo, false);
 
                 dao.tripInsert(trip);
 

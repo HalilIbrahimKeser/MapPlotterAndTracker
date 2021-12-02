@@ -1,11 +1,16 @@
 package com.halil.mapplotterandtracker;
 
 import android.content.Context;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.drawable.Drawable;
+import android.location.Location;
 import android.os.Looper;
 import android.widget.Toast;
 import androidx.core.content.res.ResourcesCompat;
 
+import com.google.android.gms.maps.model.LatLng;
+import com.halil.mapplotterandtracker.Entities.Locations;
 import com.halil.mapplotterandtracker.Entities.Trip;
 import com.halil.mapplotterandtracker.Repository.Repository;
 
@@ -18,6 +23,7 @@ import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.MapEventsOverlay;
 import org.osmdroid.views.overlay.Marker;
 import org.osmdroid.views.overlay.Polyline;
+import org.osmdroid.views.overlay.advancedpolyline.MonochromaticPaintList;
 import org.osmdroid.views.overlay.compass.CompassOverlay;
 import org.osmdroid.views.overlay.infowindow.InfoWindow;
 import org.osmdroid.views.overlay.milestones.MilestoneManager;
@@ -37,10 +43,15 @@ public class MapHelper {
     public Trip trip;
     public Context context;
     public RoadManager roadManager;
+    public IMapController mapController;
+    Location location;
     // Helper
     Helper helper = new Helper();
 
     private Repository mRepository;
+
+    private Polyline mPolyline;
+    private ArrayList<GeoPoint> pathPoints = new ArrayList<>();
 
 
     public void setPositionToCurrentLocation(Context context, GeoPoint currentPoint, Marker currentMarker, IMapController mapController, MapView mapViewOsm) {
@@ -55,6 +66,55 @@ public class MapHelper {
         }
     }
 
+    public void drawHikeTrackingline(Context context1, Repository repository1, Location location1, ArrayList<GeoPoint> waypoints1, boolean positionsSet1, boolean trackingStartet1,
+                                     RoadManager roadManager1, MapView mapViewOsm1, Marker nodeMarker1) {
+        context = context1;
+        waypoints = waypoints1;
+        positionsSet = positionsSet1;
+        trackingStartet = trackingStartet1;
+        roadManager = roadManager1;
+        mapViewOsm = mapViewOsm1;
+        nodeMarker = nodeMarker1;
+        location = location1;
+        mRepository = repository1;
+
+        mapViewOsm1.setZoomRounding(true);
+        // Map Controller
+        mapController = mapViewOsm.getController();
+        mapController.setZoom(19.0);
+
+        //Locations locations = location.
+        GeoPoint temp = new GeoPoint(location.getLatitude(), location.getLongitude());
+        mPolyline = new Polyline(mapViewOsm);
+        pathPoints.add(temp);
+        mPolyline.setPoints(pathPoints);
+
+        LatLng currentPosition1 = new LatLng(location.getLatitude(), location.getLongitude());
+        Helper.Deg2UTM curUTM = new Helper.Deg2UTM(currentPosition1.latitude, currentPosition1.longitude);
+
+        // Tar være på locations i database
+        Locations locations = new Locations(location.getLatitude(), location.getLongitude(), curUTM.Easting, curUTM.Northing, curUTM.Letter, curUTM.Zone);
+        mRepository.locationInsert(locations);
+
+        final Paint paintBorder = new Paint();
+        paintBorder.setStrokeWidth(5);
+        paintBorder.setStyle(Paint.Style.FILL_AND_STROKE);
+        paintBorder.setColor(Color.DKGRAY);
+        paintBorder.setStrokeCap(Paint.Cap.ROUND);
+        paintBorder.setAntiAlias(true);
+
+        final Paint paintInside = new Paint();
+        paintInside.setStrokeWidth(4);
+        paintInside.setStyle(Paint.Style.FILL);
+        paintInside.setColor(Color.GREEN);
+        paintInside.setStrokeCap(Paint.Cap.ROUND);
+        paintInside.setAntiAlias(true);
+
+        mPolyline.getOutlinePaintLists().add(new MonochromaticPaintList(paintBorder));
+        mPolyline.getOutlinePaintLists().add(new MonochromaticPaintList(paintInside));
+
+        mapViewOsm.getOverlays().add(mPolyline);
+    }
     public void drawPlannedTrackingline(Context context1, ArrayList<GeoPoint> waypoints1, boolean positionsSet1, boolean trackingStartet1,
                                         RoadManager roadManager1, MapView mapViewOsm1, Marker nodeMarker1) {
         // start kode fra https://github.com/MKergall/osmbonuspack
@@ -78,10 +138,6 @@ public class MapHelper {
                         roadOverlay = RoadManager.buildRoadOverlay(road);
                         roadOverlay.setGeodesic(true);
                         roadOverlay.showInfoWindow();
-                        InfoWindow info = roadOverlay.getInfoWindow();
-
-                        List<MilestoneManager> milestones = new ArrayList<MilestoneManager>();
-                        roadOverlay.setMilestoneManagers(milestones);
 
                         // Add this Polyline to the overlays to the map
                         if (road.mNodes.size() > 0) {
@@ -152,7 +208,7 @@ public class MapHelper {
 
                         Trip.StartGeo startGeo = new Trip.StartGeo(mStartPointLat, mStartPointLong);
                         Trip.StopGeo stopGeo = new Trip.StopGeo(mEndPointLat, mEndPointLong);
-                        Trip trip = new Trip(mFromAdress, mToAdress, mLength, mNodes, mDuration, mDistance, mElevation, startGeo, stopGeo, false);
+                        Trip trip = new Trip(1, mFromAdress, mToAdress, mLength, mNodes, mDuration, mDistance, mElevation, startGeo, stopGeo, false);
 
                         // Save trip
                         mRepository.tripInsert(trip);

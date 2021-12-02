@@ -87,7 +87,7 @@ public class RecordedTripsActivity extends AppCompatActivity {
             recyclerView.setLayoutManager(new LinearLayoutManager(context));
             adapter.setClickListener((view, position) -> {
                 mCurentHiking = trips.get(position);
-                mViewModel.getCurrentTrip().postValue(mCurentHiking);
+//                mViewModel.getCurrentTrip().postValue(mCurentHiking);
 
                 Intent intent = new Intent(context, MainActivity.class);
                 Bundle args = new Bundle();
@@ -100,6 +100,7 @@ public class RecordedTripsActivity extends AppCompatActivity {
                 startActivity(intent);
             });
         });
+//        mViewModel.getCurrentTrip().postValue(mCurentHiking);
     }
 
     public boolean onOptionsItemSelected(MenuItem item) {

@@ -12,10 +12,10 @@ import androidx.room.PrimaryKey;
 import java.io.Serializable;
 
 @Entity(tableName = "trip_table",
-    indices = {@Index("mTripId")},
+    indices = {@Index("mTripUserinfoID")},
             foreignKeys = {@ForeignKey(entity = UserInfo.class,
             parentColumns = "userinfoID",
-            childColumns = "mTripId",
+            childColumns = "mTripUserinfoID",
             onDelete = CASCADE)})
 
 public class Trip implements Serializable {
@@ -23,7 +23,7 @@ public class Trip implements Serializable {
     @NonNull
     @ColumnInfo(name = "mTripId") public int mTripId;
 
-    @ColumnInfo(name = "userinfoID") public int mUserinfoID;
+    @ColumnInfo(name = "mTripUserinfoID") public int mTripUserinfoID;
 
     @ColumnInfo(name = "mFromAddress") public String mFromAddress;
 
@@ -45,10 +45,11 @@ public class Trip implements Serializable {
 
     @Embedded public StopGeo stopGeo;
 
-    public Trip(String mFromAddress, String mToAddress,
+    public Trip(int mTripUserinfoID, String mFromAddress, String mToAddress,
                 double mLength, double mNodes,
                 double mDuration, double mDistance, double mElevation,
                 StartGeo startGeo, StopGeo stopGeo, Boolean mIsFinished) {
+        this.mTripUserinfoID = mTripUserinfoID;
         this.mFromAddress = mFromAddress;
         this.mToAddress = mToAddress;
         this.mLength = mLength;
@@ -75,7 +76,7 @@ public class Trip implements Serializable {
         public void setmStartPointLong(double mStartPointLong) { this.mStartPointLong = mStartPointLong; }
     }
 
-    public static class StopGeo implements Serializable{
+    public static class StopGeo implements Serializable {
         public double mEndPointLat;
         public double mEndPointLong;
 
@@ -96,6 +97,7 @@ public class Trip implements Serializable {
     public StopGeo getStopGeo() { return stopGeo; }
     public void setStopGeo(StopGeo stopGeo) { this.stopGeo = stopGeo; }
 
+    public int getmTripUserinfoID() { return mTripUserinfoID; }
     public int getmTripId() { return mTripId; }
     public double getmLength() { return mLength; }
     public double getmNodes() { return mNodes; }
@@ -106,6 +108,7 @@ public class Trip implements Serializable {
     public String getmToAddress() { return mToAddress; }
     public Boolean getmIsFinished() { return mIsFinished; }
 
+    public void setmTripUserinfoID(int mTripUserinfoID) { this.mTripUserinfoID = mTripUserinfoID; }
     public void setmTripId(int mTripId) { this.mTripId = mTripId; }
     public void setmLength(double mLength) { this.mLength = mLength; }
     public void setmNodes(double mNodes) { this.mNodes = mNodes; }

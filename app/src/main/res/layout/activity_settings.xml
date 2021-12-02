@@ -21,9 +21,31 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:menu="@menu/top_menu2"
-        app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
         app:theme="@style/MyActionBarTheme"
+        app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
         app:titleTextColor="#D8CDCD" />
+
+    <Button
+        android:id="@+id/btUpdatePerson"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="15dp"
+        android:layout_marginEnd="15dp"
+        android:layout_marginBottom="16dp"
+        android:text="Update"
+        app:layout_constraintBottom_toTopOf="@+id/textView2"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <TextView
+        android:id="@+id/textView3"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:layout_marginBottom="8dp"
+        android:text="Update information, feks your weight"
+        app:layout_constraintBottom_toTopOf="@+id/btUpdatePerson"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
 
     <com.google.android.material.bottomnavigation.BottomNavigationView
@@ -45,7 +67,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="15dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="32dp"
         android:layout_marginEnd="15dp"
         android:ems="10"
         android:hint="Name"
@@ -60,10 +82,10 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="15dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="16dp"
         android:layout_marginEnd="15dp"
         android:ems="10"
-        android:hint="Age"
+        android:hint="Birth year  i.e. 1980, 1990, 2000..."
         android:inputType="number"
         android:minHeight="48dp"
         app:layout_constraintEnd_toEndOf="parent"
@@ -75,7 +97,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="15dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="16dp"
         android:layout_marginEnd="15dp"
         android:ems="10"
         android:hint="Weight"
@@ -100,11 +122,21 @@
         android:id="@+id/btSavePerson"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="15dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="15dp"
-        android:text="Save your information"
+        android:layout_marginBottom="32dp"
+        android:text="Confirm and Save"
         app:layout_constraintBottom_toTopOf="@+id/bottom_nav"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <TextView
+        android:id="@+id/textView2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="8dp"
+        android:text="Save your information, these resets your achivements"
+        app:layout_constraintBottom_toTopOf="@+id/btSavePerson"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 

@@ -8,4 +8,6 @@
     <string name="showe_saved_routes">Show saved planned routes</string>
     <string name="exit">Exit</string>
     <string name="no_data_yet">No data yet</string>
+    <string name="my_planned_routes">My Planned Routes</string>
+    <string name="my_recorded_hikes">My Recorded Hikes</string>
 </resources>

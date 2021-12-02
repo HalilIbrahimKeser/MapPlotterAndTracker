@@ -19,7 +19,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:menu="@menu/top_menu"
+        app:menu="@menu/top_menu2"
         app:theme="@style/MyActionBarTheme"
         app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
         app:titleTextColor="#D8CDCD" />
@@ -29,7 +29,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="My Recorded Hikes"
+        android:text="@string/my_recorded_hikes"
         android:textSize="30sp"
         android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="parent"
@@ -69,8 +69,9 @@
         android:layout_marginBottom="8dp"
         android:background="?android:attr/listDivider"
         app:layout_constraintBottom_toTopOf="@+id/textView"
-        app:layout_constraintTop_toBottomOf="@+id/my_toolbar2"
-        tools:layout_editor_absoluteX="1dp" />
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/my_toolbar2" />
 
     <View
         android:id="@+id/divider3"
@@ -78,7 +79,8 @@
         android:layout_height="1dp"
         android:layout_marginTop="8dp"
         android:background="?android:attr/listDivider"
-        app:layout_constraintTop_toBottomOf="@+id/textView"
-        tools:layout_editor_absoluteX="1dp" />
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textView" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

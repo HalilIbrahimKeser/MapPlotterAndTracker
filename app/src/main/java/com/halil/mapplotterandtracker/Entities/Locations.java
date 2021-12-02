@@ -8,6 +8,7 @@ import androidx.room.PrimaryKey;
 import java.io.Serializable;
 
 @Entity(tableName = "location_table")
+
 public class Locations implements Serializable {
     @PrimaryKey(autoGenerate = true)
     @NonNull
@@ -21,11 +22,11 @@ public class Locations implements Serializable {
 
     @ColumnInfo(name = "mNorthing") public double mNorthing;
 
-    @ColumnInfo(name = "mLetter") public String mLetter;
+    @ColumnInfo(name = "mLetter") public char mLetter;
 
     @ColumnInfo(name = "Zone") public double Zone;
 
-    public Locations(double mLatitude, double mLongitude, double mEasting, double mNorthing, String mLetter, double Zone ) {
+    public Locations(double mLatitude, double mLongitude, double mEasting, double mNorthing, char mLetter, double Zone ) {
         this.mLatitude = mLatitude;
         this.mLongitude = mLongitude;
         this.mEasting = mEasting;
@@ -41,13 +42,13 @@ public class Locations implements Serializable {
     }
     public double getmEasting() { return mEasting; }
     public double getmNorthing() { return mNorthing; }
-    public String getmLetter() { return mLetter; }
+    public char getmLetter() { return mLetter; }
     public double getZone() { return Zone; }
 
     public void setZone(double zone) { Zone = zone; }
     public void setmLatitude(double mLatitude) { this.mLatitude = mLatitude; }
     public void setmLongitude(double mLongitude) { this.mLongitude = mLongitude; }
-    public void setmLetter(String mLetter) { this.mLetter = mLetter; }
+    public void setmLetter(char mLetter) { this.mLetter = mLetter; }
     public void setmEasting(double mEasting) { this.mEasting = mEasting; }
     public void setmNorthing(double mNorthing) { this.mNorthing = mNorthing; }
 }
