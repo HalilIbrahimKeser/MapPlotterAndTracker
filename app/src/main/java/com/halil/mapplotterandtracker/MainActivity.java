@@ -20,12 +20,15 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.content.res.ResourcesCompat;
 import androidx.lifecycle.ViewModelProvider;
+
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.halil.mapplotterandtracker.Entities.Locations;
@@ -33,6 +36,7 @@ import com.halil.mapplotterandtracker.Entities.Trip;
 import com.halil.mapplotterandtracker.Repository.Repository;
 import com.halil.mapplotterandtracker.VievModel.ViewModel;
 import com.halil.mapplotterandtracker.databinding.ActivityMainBinding;
+
 import org.osmdroid.api.IMapController;
 import org.osmdroid.bonuspack.routing.OSRMRoadManager;
 import org.osmdroid.bonuspack.routing.Road;
@@ -48,7 +52,9 @@ import org.osmdroid.views.overlay.Marker;
 import org.osmdroid.views.overlay.Polyline;
 import org.osmdroid.views.overlay.compass.CompassOverlay;
 import org.osmdroid.views.overlay.compass.InternalCompassOrientationProvider;
+
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements LocationListener, SensorEventListener, MapEventsReceiver {
@@ -75,6 +81,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     LocationManager locationManager;
     RoadManager roadManager = new OSRMRoadManager(this, MY_USER_AGENT);
     private static final String MY_USER_AGENT = "Halil007";
+    List<Locations> locationsList = null;
 
     // Map
     public MapView mapViewOsm;
@@ -97,6 +104,12 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     boolean trackingStartet = false;
     public Trip trip;
     int timer = 0;
+
+    // Permissions
+    private final static int REQUEST_CODE_ASK_PERMISSIONS = 2;
+    private static final String[] REQUIRED_PERMISSIONS = new String[]{
+            Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.INTERNET,
+            Manifest.permission.ACCESS_NETWORK_STATE, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE};
 
     @SuppressLint("NonConstantResourceId")
     @Override
@@ -155,7 +168,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
 
         // If there is intent extra, than go to method to show the trip from the intent of SavedRoutesActivity
         Bundle bundle = getIntent().getExtras();
-        if(bundle != null) {
+        if (bundle != null) {
             setTheTripFromIntentExtra();
         }
 
@@ -188,9 +201,9 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         // Permissions
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
                 ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            checkPermissions();
             return;
         }
-
         // Last location
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, this);
         location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
@@ -246,16 +259,14 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
                 endMarker.setTitle("End point");
                 mapViewOsm.getOverlays().add(endMarker);
                 // Now we have to points and can draw the road beetween and update the map
+                mapHelper.drawPlannedTrackingline(context, waypoints, true, false, roadManager, mapViewOsm, nodeMarker);
                 positionsSet = true;
-                mapHelper.drawPlannedTrackingline(context, waypoints, true, trackingStartet, roadManager, mapViewOsm, nodeMarker);
-
             } else {
                 Toast.makeText(this, "Remove the waypoints", Toast.LENGTH_SHORT).show();
             }
         } else {
             Toast.makeText(this, "Push start to track", Toast.LENGTH_SHORT).show();
         }
-
         return false;
     }
 
@@ -274,7 +285,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
 
         if (accelerometerSensorChanged && trackingStartet && positionsSet) {
             mapHelper.setPositionToCurrentLocation(context, currentPoint, currentMarker, mapController, mapViewOsm);
-            mapHelper.drawHikeTrackingline(context, mRepository, location, waypoints, true, true, roadManager, mapViewOsm, nodeMarker);
+            mapHelper.drawHikeTrackingline(context, mViewModel, mRepository, location, waypoints, true, true, roadManager, mapViewOsm, nodeMarker);
             // Refresh the map!
             mapViewOsm.invalidate();
         }
@@ -364,14 +375,16 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
             endMarker.setIcon(ResourcesCompat.getDrawable(getResources(), R.drawable.endicon, null));
             endMarker.setTitle("End point");
             mapViewOsm.getOverlays().add(endMarker);
-            mapHelper.drawPlannedTrackingline(context, waypoints, true, trackingStartet, roadManager, mapViewOsm, nodeMarker);
+            mapHelper.drawPlannedTrackingline(context, waypoints, true, false, roadManager, mapViewOsm, nodeMarker);
+            positionsSet = true;
+            trackingStartet = false;
         }
     }
 
     private void startProgram() {
         trackingStartet = true;
         if (positionsSet) {
-            mapHelper.drawHikeTrackingline(context, mRepository, location, waypoints, true, true, roadManager, mapViewOsm, nodeMarker);
+            mapHelper.drawHikeTrackingline(context, mViewModel, mRepository, location, waypoints, true, true, roadManager, mapViewOsm, nodeMarker);
         } else {
             Toast.makeText(this, "Create a start and end point", Toast.LENGTH_SHORT).show();
         }
@@ -380,6 +393,12 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
 
     private void stopProgram() {
         if(waypoints != null) {
+
+            mViewModel.getAllLocations().observe(this, locations -> {
+                locationsList.addAll(locations);
+            });
+            //slett alle loc i db
+//            mViewModel.de
             if (waypoints.size() == 2) {
                 waypoints.remove(startPoint);
                 waypoints.remove(endPoint);
@@ -403,4 +422,42 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         this.finish();
     }
 
+    protected void checkPermissions() {
+        //https://developer.here.com/documentation/android-premium/3.17/dev_guide/topics/request-android-permissions.html
+        final List<String> missingPermissions = new ArrayList<String>();
+
+        for (final String permission : REQUIRED_PERMISSIONS) {
+            final int result = ContextCompat.checkSelfPermission(this, permission);
+            if (result != PackageManager.PERMISSION_GRANTED) {
+                missingPermissions.add(permission);
+            }
+        }
+        if (!missingPermissions.isEmpty()) {
+            final String[] permissions = missingPermissions.toArray(new String[0]);
+            ActivityCompat.requestPermissions(this, permissions, REQUEST_CODE_ASK_PERMISSIONS);
+        } else {
+            final int[] grantResults = new int[REQUIRED_PERMISSIONS.length];
+            Arrays.fill(grantResults, PackageManager.PERMISSION_GRANTED);
+            onRequestPermissionsResult(REQUEST_CODE_ASK_PERMISSIONS, REQUIRED_PERMISSIONS,
+                    grantResults);
+        }
+    }
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        //Endret, https://developer.here.com/documentation/android-premium/3.17/dev_guide/topics/request-android-permissions.html
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_CODE_ASK_PERMISSIONS) {
+            if (grantResults.length > 0 && permissions.length == grantResults.length) {
+                for (int i = 0; i < permissions.length; i++) {
+                    if (grantResults[i] == PackageManager.PERMISSION_GRANTED) {
+                        Toast.makeText(this, "Required permission '" + permissions[i]
+                                + "' not granted", Toast.LENGTH_LONG).show();
+                    } else {
+                        Toast.makeText(this, "Required permission '" + permissions[i]
+                                + "' not granted, exiting", Toast.LENGTH_LONG).show();
+                    }
+                }
+            }
+        }
+    }
 }

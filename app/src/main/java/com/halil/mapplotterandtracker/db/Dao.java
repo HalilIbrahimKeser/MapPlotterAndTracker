@@ -28,6 +28,9 @@ public interface Dao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     void locationInsert(Locations location);
 
+//    @Query("SELECT * FROM location_table WHERE locTripID = :mTripID")
+//    LiveData<List<Locations>> getLocationPath(int mTripID);
+
     // USER - - - - - - - - - - - - - - - - - - - - -  -
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     void userInfoInsert(UserInfo user);

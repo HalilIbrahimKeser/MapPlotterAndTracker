@@ -7,12 +7,17 @@ import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.os.Looper;
 import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.res.ResourcesCompat;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProvider;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.halil.mapplotterandtracker.Entities.Locations;
 import com.halil.mapplotterandtracker.Entities.Trip;
 import com.halil.mapplotterandtracker.Repository.Repository;
+import com.halil.mapplotterandtracker.VievModel.ViewModel;
 
 import org.osmdroid.api.IMapController;
 import org.osmdroid.bonuspack.routing.Road;
@@ -31,7 +36,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 
-public class MapHelper {
+public class MapHelper extends AppCompatActivity {
     public MapView mapViewOsm;
     public Polyline roadOverlay;
     public ArrayList<GeoPoint> waypoints;
@@ -49,10 +54,21 @@ public class MapHelper {
     Helper helper = new Helper();
 
     private Repository mRepository;
+    ViewModel mViewModel;
 
     private Polyline mPolyline;
     private ArrayList<GeoPoint> pathPoints = new ArrayList<>();
 
+
+    public void setCurrentLocation(Locations currentLocation) {
+
+    }
+    public Locations getCurrentLocation(MainActivity activity) {
+//        mViewModel = new ViewModelProvider(activity).get(ViewModel.class);
+//        mViewModel.getCurrentTrip().observe(context);
+//
+            return null;
+    }
 
     public void setPositionToCurrentLocation(Context context, GeoPoint currentPoint, Marker currentMarker, IMapController mapController, MapView mapViewOsm) {
         if (currentPoint != null) {
@@ -66,7 +82,7 @@ public class MapHelper {
         }
     }
 
-    public void drawHikeTrackingline(Context context1, Repository repository1, Location location1, ArrayList<GeoPoint> waypoints1, boolean positionsSet1, boolean trackingStartet1,
+    public void drawHikeTrackingline(Context context1, ViewModel viewModel1, Repository repository1, Location location1, ArrayList<GeoPoint> waypoints1, boolean positionsSet1, boolean trackingStartet1,
                                      RoadManager roadManager1, MapView mapViewOsm1, Marker nodeMarker1) {
         context = context1;
         waypoints = waypoints1;
@@ -77,6 +93,7 @@ public class MapHelper {
         nodeMarker = nodeMarker1;
         location = location1;
         mRepository = repository1;
+        mViewModel = viewModel1;
 
         mapViewOsm1.setZoomRounding(true);
         // Map Controller
@@ -92,9 +109,10 @@ public class MapHelper {
         LatLng currentPosition1 = new LatLng(location.getLatitude(), location.getLongitude());
         Helper.Deg2UTM curUTM = new Helper.Deg2UTM(currentPosition1.latitude, currentPosition1.longitude);
 
+
         // Tar være på locations i database
-        Locations locations = new Locations(location.getLatitude(), location.getLongitude(), curUTM.Easting, curUTM.Northing, curUTM.Letter, curUTM.Zone);
-        mRepository.locationInsert(locations);
+        Locations locations = new Locations(1, location.getLatitude(), location.getLongitude(), curUTM.Easting, curUTM.Northing, curUTM.Letter, curUTM.Zone);
+        mViewModel.insertLocation(locations);
 
         final Paint paintBorder = new Paint();
         paintBorder.setStrokeWidth(5);
@@ -211,6 +229,7 @@ public class MapHelper {
                         Trip trip = new Trip(1, mFromAdress, mToAdress, mLength, mNodes, mDuration, mDistance, mElevation, startGeo, stopGeo, false);
 
                         // Save trip
+                        //todo endre til viewmodel
                         mRepository.tripInsert(trip);
 
                         Looper.prepare();
