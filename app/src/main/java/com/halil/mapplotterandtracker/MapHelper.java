@@ -161,7 +161,8 @@ public class MapHelper extends AppCompatActivity {
                         if (road.mNodes.size() > 0) {
                             mapViewOsm.getOverlays().add(roadOverlay);
                         } else {
-                            Toast.makeText(context, "No nodes to draw, fail in roadManager", Toast.LENGTH_SHORT).show();
+                            Looper.prepare();
+                            Toast.makeText(context, "No nodes to draw, fail in roadManager. Have you allowed internet permissions?", Toast.LENGTH_SHORT).show();
                         }
 
                         // Adds nodes to the rode

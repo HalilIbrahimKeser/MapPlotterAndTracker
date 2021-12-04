@@ -3,7 +3,6 @@ package com.halil.mapplotterandtracker.Repository;
 import android.app.Application;
 
 import androidx.lifecycle.LiveData;
-import androidx.lifecycle.MutableLiveData;
 
 import com.halil.mapplotterandtracker.Entities.Locations;
 import com.halil.mapplotterandtracker.Entities.Trip;
@@ -67,7 +66,14 @@ public class Repository {
     }
 
     public LiveData<List<Locations>> getAllLocations() {
-        return mAllLocations;
+        LiveData<List<Locations>> mAllLocations1 = mDao.getAllLocations();
+        return mAllLocations1;
+    }
+
+    public void deleteAllLocations(List<Locations> locationsList) {
+        RoomDatabase.databaseWriteExecutor.execute(() -> {
+            mDao.resetLocations(locationsList);
+        });
     }
 
     /** TRIP --------------------*/

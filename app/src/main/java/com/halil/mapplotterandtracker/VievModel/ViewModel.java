@@ -37,11 +37,16 @@ public class ViewModel extends AndroidViewModel {
 
     // Locations
     public LiveData<List<Locations>> getAllLocations() {
-        return mAllLocations;
+        LiveData<List<Locations>> locationsList1 = mRepository.getAllLocations();
+        return locationsList1;
     }
 
     public void insertLocation(Locations location) {
         mRepository.locationInsert(location);
+    }
+
+    public void deleteAllLocations(List<Locations> locationsList) {
+        mRepository.deleteAllLocations(locationsList);
     }
 
     //TRIP ------------------------------------------------------------

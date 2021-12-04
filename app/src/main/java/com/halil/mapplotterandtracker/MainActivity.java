@@ -3,12 +3,14 @@ package com.halil.mapplotterandtracker;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -22,6 +24,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
@@ -106,10 +109,12 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     int timer = 0;
 
     // Permissions
-    private final static int REQUEST_CODE_ASK_PERMISSIONS = 2;
+    private final static int MY_PERMISSIONS_REQUEST_LOCATION = 2;
     private static final String[] REQUIRED_PERMISSIONS = new String[]{
             Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.INTERNET,
             Manifest.permission.ACCESS_NETWORK_STATE, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE};
+    String provider;
+
 
     @SuppressLint("NonConstantResourceId")
     @Override
@@ -118,12 +123,13 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         LayoutInflater layoutInflater = (LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE);
         binding = ActivityMainBinding.inflate(layoutInflater);
         setContentView(binding.getRoot());
-
         context = getApplicationContext();
         Configuration.getInstance().load(context, PreferenceManager.getDefaultSharedPreferences(context));
 
         // Text views
         tvAddress = binding.tvAddress;
+
+        checkLocationPermission();
 
         // Toolbar
         Toolbar myToolbar = binding.myToolbar;
@@ -179,6 +185,26 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         // mRepository.deleteTrip(3); mRepository.deleteTrip(4); mRepository.deleteTrip(5);mRepository.deleteTrip(6);
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED) {
+            locationManager.requestLocationUpdates(provider, 400, 1, this);
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED) {
+            locationManager.removeUpdates(this);
+        }
+    }
+
     private void initMap() {
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
@@ -199,13 +225,14 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         mapViewOsm.getOverlays().add(mCompassOverlay);
 
         // Permissions
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
-                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            checkPermissions();
+
+        // Last location
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            checkLocationPermission();
             return;
         }
-        // Last location
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, this);
+        provider = locationManager.getBestProvider(new Criteria(), false); //gps. Henter beste mulige verktøy feks gps
         location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
 
         // Set-up start and end points
@@ -219,19 +246,16 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
             currentPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
         }
         mapController.setCenter(currentPoint);
-        assert location != null;
         double latitude = location.getLatitude();
         double longitude = location.getLongitude();
         LatLng currentPosition = new LatLng(latitude, longitude);
+        Helper.Deg2UTM curUTM = new Helper.Deg2UTM(currentPosition.latitude, currentPosition.longitude);
 
         // Initialize start marker and end marker
         startMarker = new Marker(mapViewOsm);
         endMarker = new Marker(mapViewOsm);
         currentMarker = new Marker(mapViewOsm);
-
-        Helper.Deg2UTM curUTM = new Helper.Deg2UTM(currentPosition.latitude, currentPosition.longitude);
     }
-
 
     @Override
     public boolean singleTapConfirmedHelper(GeoPoint point) {
@@ -347,6 +371,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     }
 
     private void setTheTripFromIntentExtra() {
+        //En intent er sendt fra annen aktivitet. Da tegnes denne ruten. Inten er enten fra Recorded eller Planned routes.
         mCurentHiking = mViewModel.getCurrentTrip().getValue();
         Intent intent = getIntent();
         Bundle args = intent.getBundleExtra("bundle");
@@ -382,23 +407,38 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     }
 
     private void startProgram() {
-        trackingStartet = true;
-        if (positionsSet) {
-            mapHelper.drawHikeTrackingline(context, mViewModel, mRepository, location, waypoints, true, true, roadManager, mapViewOsm, nodeMarker);
-        } else {
-            Toast.makeText(this, "Create a start and end point", Toast.LENGTH_SHORT).show();
+        if(!trackingStartet) {
+            // Start knapp er trykket
+            trackingStartet = true;
+            mapHelper.setPositionToCurrentLocation(context, currentPoint, currentMarker, mapController, mapViewOsm);
+            if (positionsSet) {
+                mapHelper.drawHikeTrackingline(context, mViewModel, mRepository, location, waypoints, true, true, roadManager, mapViewOsm, nodeMarker);
+            } else {
+                Toast.makeText(this, "Create a start and end point", Toast.LENGTH_SHORT).show();
+            }
+        }else {
+            // Start knapp er trykket enda en gang
+            Toast.makeText(this, "Tracking already started. Start hiking! Good luck!", Toast.LENGTH_LONG).show();
         }
-
     }
 
     private void stopProgram() {
         if(waypoints != null) {
-
             mViewModel.getAllLocations().observe(this, locations -> {
-                locationsList.addAll(locations);
+                if(locations != null) {
+                    List<Locations> list = locations;
+                    locationsList.addAll(locations);
+                } else {
+                    Toast.makeText(this, "No data got from saved locations.", Toast.LENGTH_LONG).show();
+
+                }
             });
-            //slett alle loc i db
-//            mViewModel.de
+
+            //slett alle locations i db. Vi er ferdig med de.
+            if(locationsList != null) {
+                mViewModel.deleteAllLocations(locationsList);
+            }
+
             if (waypoints.size() == 2) {
                 waypoints.remove(startPoint);
                 waypoints.remove(endPoint);
@@ -422,42 +462,56 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         this.finish();
     }
 
-    protected void checkPermissions() {
-        //https://developer.here.com/documentation/android-premium/3.17/dev_guide/topics/request-android-permissions.html
-        final List<String> missingPermissions = new ArrayList<String>();
+    public boolean checkLocationPermission() {
+        //https://stackoverflow.com/questions/40142331/how-to-request-location-permission-at-runtime
+        if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
 
-        for (final String permission : REQUIRED_PERMISSIONS) {
-            final int result = ContextCompat.checkSelfPermission(this, permission);
-            if (result != PackageManager.PERMISSION_GRANTED) {
-                missingPermissions.add(permission);
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+                    Manifest.permission.ACCESS_FINE_LOCATION)) {
+                new AlertDialog.Builder(this)
+                        .setTitle("The application needs GPS data")
+                        .setMessage("The application")
+                        .setPositiveButton("Accept", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                //Prompt the user once explanation has been shown
+                                ActivityCompat.requestPermissions(MainActivity.this,
+                                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                                        MY_PERMISSIONS_REQUEST_LOCATION);
+                            }
+                        })
+                        .create()
+                        .show();
+            } else {
+                // No explanation needed, we can request the permission.
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, MY_PERMISSIONS_REQUEST_LOCATION);
             }
-        }
-        if (!missingPermissions.isEmpty()) {
-            final String[] permissions = missingPermissions.toArray(new String[0]);
-            ActivityCompat.requestPermissions(this, permissions, REQUEST_CODE_ASK_PERMISSIONS);
+            return false;
         } else {
-            final int[] grantResults = new int[REQUIRED_PERMISSIONS.length];
-            Arrays.fill(grantResults, PackageManager.PERMISSION_GRANTED);
-            onRequestPermissionsResult(REQUEST_CODE_ASK_PERMISSIONS, REQUIRED_PERMISSIONS,
-                    grantResults);
+            return true;
         }
     }
+
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        //Endret, https://developer.here.com/documentation/android-premium/3.17/dev_guide/topics/request-android-permissions.html
+    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+        //https://stackoverflow.com/questions/40142331/how-to-request-location-permission-at-runtime
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQUEST_CODE_ASK_PERMISSIONS) {
-            if (grantResults.length > 0 && permissions.length == grantResults.length) {
-                for (int i = 0; i < permissions.length; i++) {
-                    if (grantResults[i] == PackageManager.PERMISSION_GRANTED) {
-                        Toast.makeText(this, "Required permission '" + permissions[i]
-                                + "' not granted", Toast.LENGTH_LONG).show();
-                    } else {
-                        Toast.makeText(this, "Required permission '" + permissions[i]
-                                + "' not granted, exiting", Toast.LENGTH_LONG).show();
-                    }
+        if (requestCode == MY_PERMISSIONS_REQUEST_LOCATION) {// If request is cancelled, the result arrays are empty.
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
+                // permission was granted, yay! Do the
+                // location-related task you need to do.
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                    //Request location updates:
+                    locationManager.requestLocationUpdates(provider, 400, 1, this);
                 }
+            } else {
+                // permission denied, boo! Disable the
+                // functionality that depends on this permission.
             }
+            return;
         }
     }
 }
