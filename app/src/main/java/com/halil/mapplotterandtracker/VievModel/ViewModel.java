@@ -25,8 +25,6 @@ public class ViewModel extends AndroidViewModel {
     public ViewModel(Application application) {
         super(application);
         this.mRepository = new Repository(application);
-        mAllTrips = mRepository.getAllTrips();
-        mAllLocations = mRepository.getAllLocations();
     }
 
     // User
@@ -37,8 +35,8 @@ public class ViewModel extends AndroidViewModel {
 
     // Locations
     public LiveData<List<Locations>> getAllLocations() {
-        LiveData<List<Locations>> locationsList1 = mRepository.getAllLocations();
-        return locationsList1;
+        mAllLocations = mRepository.getAllLocations();
+        return mAllLocations;
     }
 
     public void insertLocation(Locations location) {
@@ -66,7 +64,8 @@ public class ViewModel extends AndroidViewModel {
         return mRepository.getSingleTrip(mTripID);
     }
 
-    public LiveData<List<Trip>> getAllTrips() {
+    public LiveData<List<Trip>> getAllTrips(Boolean finished) {
+        mAllTrips = mRepository.getAllTrips(finished);
         return mAllTrips;
     }
 

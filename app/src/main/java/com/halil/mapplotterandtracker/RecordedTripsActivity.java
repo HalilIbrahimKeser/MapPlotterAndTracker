@@ -81,7 +81,7 @@ public class RecordedTripsActivity extends AppCompatActivity {
 
         // ViewModel
         mViewModel = new ViewModelProvider(this).get(ViewModel.class);
-        mViewModel.getAllTrips().observe(this, trips -> {
+        mViewModel.getAllTrips(true).observe(this, trips -> {
             adapter = new AdapterClass(this, trips);
             recyclerView.setAdapter(adapter);
             recyclerView.setLayoutManager(new LinearLayoutManager(context));

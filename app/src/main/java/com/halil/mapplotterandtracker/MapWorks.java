@@ -6,12 +6,11 @@ import android.graphics.Paint;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.os.Looper;
+import android.util.Log;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.res.ResourcesCompat;
-import androidx.lifecycle.Observer;
-import androidx.lifecycle.ViewModelProvider;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.halil.mapplotterandtracker.Entities.Locations;
@@ -25,18 +24,15 @@ import org.osmdroid.bonuspack.routing.RoadManager;
 import org.osmdroid.bonuspack.routing.RoadNode;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
-import org.osmdroid.views.overlay.MapEventsOverlay;
 import org.osmdroid.views.overlay.Marker;
 import org.osmdroid.views.overlay.Polyline;
 import org.osmdroid.views.overlay.advancedpolyline.MonochromaticPaintList;
-import org.osmdroid.views.overlay.compass.CompassOverlay;
-import org.osmdroid.views.overlay.infowindow.InfoWindow;
-import org.osmdroid.views.overlay.milestones.MilestoneManager;
+
 import java.util.ArrayList;
 import java.util.List;
 
 
-public class MapHelper extends AppCompatActivity {
+public class MapWorks extends AppCompatActivity {
     public MapView mapViewOsm;
     public Polyline roadOverlay;
     public ArrayList<GeoPoint> waypoints;
@@ -50,25 +46,15 @@ public class MapHelper extends AppCompatActivity {
     public RoadManager roadManager;
     public IMapController mapController;
     Location location;
+    public boolean tripIsFinnished;
     // Helper
-    Helper helper = new Helper();
+    LocationHelper locationHelper = new LocationHelper();
 
     private Repository mRepository;
     ViewModel mViewModel;
 
     private Polyline mPolyline;
     private ArrayList<GeoPoint> pathPoints = new ArrayList<>();
-
-
-    public void setCurrentLocation(Locations currentLocation) {
-
-    }
-    public Locations getCurrentLocation(MainActivity activity) {
-//        mViewModel = new ViewModelProvider(activity).get(ViewModel.class);
-//        mViewModel.getCurrentTrip().observe(context);
-//
-            return null;
-    }
 
     public void setPositionToCurrentLocation(Context context, GeoPoint currentPoint, Marker currentMarker, IMapController mapController, MapView mapViewOsm) {
         if (currentPoint != null) {
@@ -95,24 +81,30 @@ public class MapHelper extends AppCompatActivity {
         mRepository = repository1;
         mViewModel = viewModel1;
 
+        GeoPoint currentPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
+
         mapViewOsm1.setZoomRounding(true);
         // Map Controller
         mapController = mapViewOsm.getController();
         mapController.setZoom(19.0);
+        mapController.setCenter(currentPoint);
+        mapController.animateTo(currentPoint);
 
         //Locations locations = location.
-        GeoPoint temp = new GeoPoint(location.getLatitude(), location.getLongitude());
         mPolyline = new Polyline(mapViewOsm);
-        pathPoints.add(temp);
+        pathPoints.add(currentPoint);
         mPolyline.setPoints(pathPoints);
 
         LatLng currentPosition1 = new LatLng(location.getLatitude(), location.getLongitude());
-        Helper.Deg2UTM curUTM = new Helper.Deg2UTM(currentPosition1.latitude, currentPosition1.longitude);
-
+        LocationHelper.Deg2UTM curUTM = new LocationHelper.Deg2UTM(currentPosition1.latitude, currentPosition1.longitude);
 
         // Tar være på locations i database
-        Locations locations = new Locations(1, location.getLatitude(), location.getLongitude(), curUTM.Easting, curUTM.Northing, curUTM.Letter, curUTM.Zone);
+        Locations locations = new Locations(1, location.getLatitude(), location.getLongitude(), location.getAltitude(),
+                curUTM.Easting, curUTM.Northing, curUTM.Letter, curUTM.Zone, location.getBearing(), location.getBearingAccuracyDegrees());
         mViewModel.insertLocation(locations);
+
+        Log.d("LOG", String.valueOf(location.getAltitude()));
+        Toast.makeText(context.getApplicationContext(), String.valueOf(location.getAltitude()), Toast.LENGTH_LONG).show();
 
         final Paint paintBorder = new Paint();
         paintBorder.setStrokeWidth(5);
@@ -196,7 +188,7 @@ public class MapHelper extends AppCompatActivity {
     }
 
     // SAVE, must be in this helper file, bacause og the "roadOverlay" in method drawPlannedTrackingline()
-    public void saveTrip(Context context1, Repository mRepository1, ArrayList<GeoPoint> waypoints1, Road road1,
+    public void saveTrip(boolean isFinished1, Context context1, Repository mRepository1, ArrayList<GeoPoint> waypoints1, Road road1,
                          RoadManager roadManager1) {
         // Create a trip and save it to file
         context = context1;
@@ -204,42 +196,40 @@ public class MapHelper extends AppCompatActivity {
         waypoints = waypoints1;
         road = road1;
         roadManager = roadManager1;
+        tripIsFinnished = isFinished1;
 
         if (waypoints.size() != 0) {
-            Thread thread = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        // Road between points
-                        road = roadManager.getRoad(waypoints);
+            Thread thread = new Thread(() -> {
+                try {
+                    // Road between points
+                    road = roadManager.getRoad(waypoints);
 
-                        String mFromAdress = helper.getLocationInformation(context, waypoints.get(0).getLatitude(), waypoints.get(0).getLongitude());
-                        String mToAdress = helper.getLocationInformation(context, waypoints.get(1).getLatitude(), waypoints.get(1).getLongitude());
-                        double mLength = road.mLength;
-                        double mNodes = road.mNodes.size();
-                        double mDuration = road.mDuration;
-                        double mDistance = roadOverlay.getDistance();
-                        double mElevation = Math.max(waypoints.get(0).getAltitude(), waypoints.get(1).getAltitude());
-                        double mStartPointLat = waypoints.get(0).getLatitude();
-                        double mStartPointLong = waypoints.get(0).getLongitude();
-                        double mEndPointLat = waypoints.get(1).getLatitude();
-                        double mEndPointLong = waypoints.get(1).getLongitude();
+                    String mFromAdress = locationHelper.getLocationInformation(context, waypoints.get(0).getLatitude(), waypoints.get(0).getLongitude());
+                    String mToAdress = locationHelper.getLocationInformation(context, waypoints.get(1).getLatitude(), waypoints.get(1).getLongitude());
+                    double mLength = road.mLength;
+                    double mNodes = road.mNodes.size();
+                    double mDuration = road.mDuration;
+                    double mDistance = roadOverlay.getDistance();
+                    double mElevation = Math.max(waypoints.get(0).getAltitude(), waypoints.get(1).getAltitude());
+//                    double mElevation = location.getAltitude();
+                    double mStartPointLat = waypoints.get(0).getLatitude();
+                    double mStartPointLong = waypoints.get(0).getLongitude();
+                    double mEndPointLat = waypoints.get(1).getLatitude();
+                    double mEndPointLong = waypoints.get(1).getLongitude();
 
-                        Trip.StartGeo startGeo = new Trip.StartGeo(mStartPointLat, mStartPointLong);
-                        Trip.StopGeo stopGeo = new Trip.StopGeo(mEndPointLat, mEndPointLong);
-                        Trip trip = new Trip(1, mFromAdress, mToAdress, mLength, mNodes, mDuration, mDistance, mElevation, startGeo, stopGeo, false);
+                    Trip.StartGeo startGeo = new Trip.StartGeo(mStartPointLat, mStartPointLong);
+                    Trip.StopGeo stopGeo = new Trip.StopGeo(mEndPointLat, mEndPointLong);
+                    Trip trip = new Trip(1, mFromAdress, mToAdress, mLength, mNodes, mDuration, mDistance, mElevation, startGeo, stopGeo, tripIsFinnished);
 
-                        // Save trip
-                        //todo endre til viewmodel
-                        mRepository.tripInsert(trip);
+                    // Save trip
+                    //todo endre til viewmodel
+                    mRepository.tripInsert(trip);
 
-                        Looper.prepare();
+                    Looper.prepare();
+                    Toast.makeText(context.getApplicationContext(), "Trip saved", Toast.LENGTH_LONG).show();
 
-                        Toast.makeText(context.getApplicationContext(), "Trip saved", Toast.LENGTH_LONG).show();
-
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
             });
             thread.start();
@@ -247,4 +237,5 @@ public class MapHelper extends AppCompatActivity {
             Toast.makeText(context, "No trip to save. Create a trip first", Toast.LENGTH_SHORT).show();
         }
     }
+
 }

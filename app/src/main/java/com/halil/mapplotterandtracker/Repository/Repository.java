@@ -15,8 +15,8 @@ import java.util.List;
 public class Repository {
 
     private final Dao mDao;
-    private final LiveData<List<Trip>> mAllTrips;
-    private final LiveData<List<Locations>> mAllLocations;
+    public LiveData<List<Trip>> mAllTrips;
+    public LiveData<List<Locations>> mAllLocations;
     public LiveData<List<Trip>> singleTrip;
     public LiveData<List<UserInfo>> user;
 
@@ -24,8 +24,6 @@ public class Repository {
 
         RoomDatabase db = RoomDatabase.getDatabase(application);
         mDao = db.Dao();
-        mAllTrips = mDao.getTrips();
-        mAllLocations = mDao.getAllLocations();
     }
 
     /** USER --------------------*/
@@ -66,8 +64,8 @@ public class Repository {
     }
 
     public LiveData<List<Locations>> getAllLocations() {
-        LiveData<List<Locations>> mAllLocations1 = mDao.getAllLocations();
-        return mAllLocations1;
+        mAllLocations = mDao.getAllLocations();
+        return mAllLocations;
     }
 
     public void deleteAllLocations(List<Locations> locationsList) {
@@ -75,6 +73,12 @@ public class Repository {
             mDao.resetLocations(locationsList);
         });
     }
+    public void resetAllLocations() {
+        RoomDatabase.databaseWriteExecutor.execute(() -> {
+            mDao.resetAllLocations();
+        });
+    }
+
 
     /** TRIP --------------------*/
     public void tripInsert(Trip trip) {
@@ -83,7 +87,12 @@ public class Repository {
         });
     }
 
-    public LiveData<List<Trip>> getAllTrips() {
+    public LiveData<List<Trip>> getAllTrips(Boolean finnished) {
+        if(finnished) {
+            mAllTrips = mDao.getFinnishedTrips();
+        } else {
+            mAllTrips = mDao.getNotFinnishedTrips();
+        }
         return mAllTrips;
     }
 

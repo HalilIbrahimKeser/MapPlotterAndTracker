@@ -19,7 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-public class Helper {
+public class LocationHelper {
 
     // Degrees to UTM. From Example of the teacher Aleksander
     static class Deg2UTM

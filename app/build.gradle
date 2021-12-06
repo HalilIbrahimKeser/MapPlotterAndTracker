@@ -94,4 +94,11 @@ dependencies {
     implementation "androidx.fragment:fragment-ktx:1.4.0"
     implementation 'androidx.lifecycle:lifecycle-extensions:2.2.0'
 
+    //https://github.com/googlesamples/easypermissions
+    // For developers using AndroidX in their applications
+    implementation 'pub.devrel:easypermissions:3.0.0'
+
+    // For developers using the Android Support Library
+    implementation 'pub.devrel:easypermissions:2.0.1'
+
 }

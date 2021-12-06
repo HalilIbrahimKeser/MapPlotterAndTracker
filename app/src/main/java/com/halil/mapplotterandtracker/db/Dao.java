@@ -22,6 +22,9 @@ public interface Dao {
     @Delete
     void resetLocations(List<Locations> locationsList);
 
+    @Query("DELETE FROM location_table")
+    void resetAllLocations();
+
     @Query("SELECT * FROM location_table ORDER BY locationID")
     LiveData<List<Locations>> getAllLocations();
 
@@ -51,8 +54,11 @@ public interface Dao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     void tripInsert(Trip trip);
 
-    @Query("SELECT * FROM trip_table ORDER BY mTripId")
-    LiveData<List<Trip>> getTrips();
+    @Query("SELECT * FROM trip_table WHERE isFinished == 1 ORDER BY mTripId")
+    LiveData<List<Trip>> getFinnishedTrips();
+    @Query("SELECT * FROM trip_table WHERE isFinished == 0 ORDER BY mTripId")
+    LiveData<List<Trip>> getNotFinnishedTrips();
+
 
     @Query("SELECT * FROM trip_table WHERE mTripId = :mTripId")
     LiveData<List<Trip>> getTripData(int mTripId);

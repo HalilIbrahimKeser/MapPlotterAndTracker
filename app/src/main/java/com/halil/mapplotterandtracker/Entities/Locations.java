@@ -29,23 +29,35 @@ public class Locations implements Serializable {
 
     @ColumnInfo(name = "mLongitude") public double mLongitude;
 
+    @ColumnInfo(name = "mAltitude") public double mAltitude;
+
     @ColumnInfo(name = "mEasting") public double mEasting;
 
     @ColumnInfo(name = "mNorthing") public double mNorthing;
 
     @ColumnInfo(name = "mLetter") public char mLetter;
 
-    @ColumnInfo(name = "Zone") public double Zone;
+    @ColumnInfo(name = "mZone") public double mZone;
 
-    public Locations(int mLocationTripId, double mLatitude, double mLongitude, double mEasting, double mNorthing, char mLetter, double Zone ) {
+    @ColumnInfo(name = "mBearing") public double mBearing;
+
+    @ColumnInfo(name = "mBearingAccuracyDegrees") public double mBearingAccuracyDegrees;
+
+    public Locations(int mLocationTripId, double mLatitude, double mLongitude, double mAltitude, double mEasting,
+                     double mNorthing, char mLetter, double mZone, double mBearing, double mBearingAccuracyDegrees) {
         this.mLocationTripId = mLocationTripId;
         this.mLatitude = mLatitude;
         this.mLongitude = mLongitude;
         this.mEasting = mEasting;
+        this.mAltitude = mAltitude;
         this.mNorthing = mNorthing;
         this.mLetter = mLetter;
-        this.Zone = Zone;
+        this.mZone = mZone;
+        this.mBearing = mBearing;
+        this.mBearingAccuracyDegrees = mBearingAccuracyDegrees;
     }
+
+    public int getmLocationID() { return mLocationID; }
     public double getmLocationTripId() {
         return mLocationTripId;
     }
@@ -55,16 +67,25 @@ public class Locations implements Serializable {
     public double getmLongitude() {
         return mLongitude;
     }
+    public double getmAltitude() {
+        return mAltitude;
+    }
     public double getmEasting() { return mEasting; }
     public double getmNorthing() { return mNorthing; }
     public char getmLetter() { return mLetter; }
-    public double getZone() { return Zone; }
+    public double getmZone() { return mZone; }
+    public double getmBearing() { return mBearing; }
+    public double getmBearingAccuracyDegrees() { return mBearingAccuracyDegrees; }
 
-    public void setmLocationTripId(int mLocationTripId) { mLocationTripId = mLocationTripId; }
-    public void setZone(double zone) { Zone = zone; }
+    public void setmLocationID(int mLocationID) { this.mLocationID = mLocationID; }
+    public void setmLocationTripId(int mLocationTripId) { this.mLocationTripId = mLocationTripId; }
+    public void setmZone(double zone) { this.mZone = zone; }
     public void setmLatitude(double mLatitude) { this.mLatitude = mLatitude; }
     public void setmLongitude(double mLongitude) { this.mLongitude = mLongitude; }
+    public void setmAltitude(double mAltitude) { this.mAltitude = mAltitude; }
     public void setmLetter(char mLetter) { this.mLetter = mLetter; }
     public void setmEasting(double mEasting) { this.mEasting = mEasting; }
     public void setmNorthing(double mNorthing) { this.mNorthing = mNorthing; }
+    public void setmBearing(double mBearing) { this.mBearing = mBearing; }
+    public void setmBearingAccuracyDegrees(double mBearingAccuracyDegrees) { this.mBearingAccuracyDegrees = mBearingAccuracyDegrees; }
 }

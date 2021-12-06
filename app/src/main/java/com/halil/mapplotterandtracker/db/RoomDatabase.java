@@ -55,6 +55,7 @@ public abstract class RoomDatabase extends androidx.room.RoomDatabase {
                 Trip.StartGeo startGeo = new Trip.StartGeo(59.948376, 11.007322);
                 Trip.StopGeo stopGeo = new Trip.StopGeo(11.007322, 59.943497);
                 Trip trip =  new Trip(1,"Home", "Job", 0.5, 10, 50, 20,50, startGeo, stopGeo, false);
+                trip.mIsFinished = false;
 
                 dao.tripInsert(trip);
 
