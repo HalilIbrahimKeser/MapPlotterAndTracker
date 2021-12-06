@@ -1,20 +1,23 @@
 package com.halil.mapplotterandtracker;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
+import android.os.Bundle;
 import android.os.Looper;
-import android.util.Log;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.res.ResourcesCompat;
+import androidx.lifecycle.ViewModelProvider;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.halil.mapplotterandtracker.Entities.Locations;
 import com.halil.mapplotterandtracker.Entities.Trip;
+import com.halil.mapplotterandtracker.Entities.UserInfo;
 import com.halil.mapplotterandtracker.Repository.Repository;
 import com.halil.mapplotterandtracker.VievModel.ViewModel;
 
@@ -52,10 +55,22 @@ public class MapWorks extends AppCompatActivity {
 
     private Repository mRepository;
     ViewModel mViewModel;
+    ViewModel mViewModelFromMain;
+
+    public List<UserInfo> mUserList;
+    public UserInfo mUser;
 
     private Polyline mPolyline;
     private ArrayList<GeoPoint> pathPoints = new ArrayList<>();
 
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        // Get user info
+        mViewModel = new ViewModelProvider(this).get(ViewModel.class);
+
+    }
     public void setPositionToCurrentLocation(Context context, GeoPoint currentPoint, Marker currentMarker, IMapController mapController, MapView mapViewOsm) {
         if (currentPoint != null) {
             currentMarker.setPosition(currentPoint);
@@ -103,8 +118,7 @@ public class MapWorks extends AppCompatActivity {
                 curUTM.Easting, curUTM.Northing, curUTM.Letter, curUTM.Zone, location.getBearing(), location.getBearingAccuracyDegrees());
         mViewModel.insertLocation(locations);
 
-        Log.d("LOG", String.valueOf(location.getAltitude()));
-        Toast.makeText(context.getApplicationContext(), String.valueOf(location.getAltitude()), Toast.LENGTH_LONG).show();
+        //trip insert
 
         final Paint paintBorder = new Paint();
         paintBorder.setStrokeWidth(5);
@@ -188,7 +202,7 @@ public class MapWorks extends AppCompatActivity {
     }
 
     // SAVE, must be in this helper file, bacause og the "roadOverlay" in method drawPlannedTrackingline()
-    public void saveTrip(boolean isFinished1, Context context1, Repository mRepository1, ArrayList<GeoPoint> waypoints1, Road road1,
+    public void saveTrip(boolean isFinished1, ViewModel viewModel1, Context context1, Repository mRepository1, ArrayList<GeoPoint> waypoints1, Road road1,
                          RoadManager roadManager1) {
         // Create a trip and save it to file
         context = context1;
@@ -197,6 +211,10 @@ public class MapWorks extends AppCompatActivity {
         road = road1;
         roadManager = roadManager1;
         tripIsFinnished = isFinished1;
+        mViewModel = viewModel1;
+
+        mUserList = mViewModel.getSingleUser(1).getValue();
+        mUser = mUserList.get(0);
 
         if (waypoints.size() != 0) {
             Thread thread = new Thread(() -> {
@@ -210,24 +228,33 @@ public class MapWorks extends AppCompatActivity {
                     double mNodes = road.mNodes.size();
                     double mDuration = road.mDuration;
                     double mDistance = roadOverlay.getDistance();
-                    double mElevation = Math.max(waypoints.get(0).getAltitude(), waypoints.get(1).getAltitude());
-//                    double mElevation = location.getAltitude();
+
+                    double mStartAltitude = waypoints.get(0).getAltitude();
+                    double mEndAltitude = waypoints.get(1).getAltitude();
+                    double mElevation = Math.max(mStartAltitude, mEndAltitude);
+
                     double mStartPointLat = waypoints.get(0).getLatitude();
                     double mStartPointLong = waypoints.get(0).getLongitude();
                     double mEndPointLat = waypoints.get(1).getLatitude();
                     double mEndPointLong = waypoints.get(1).getLongitude();
 
-                    Trip.StartGeo startGeo = new Trip.StartGeo(mStartPointLat, mStartPointLong);
-                    Trip.StopGeo stopGeo = new Trip.StopGeo(mEndPointLat, mEndPointLong);
-                    Trip trip = new Trip(1, mFromAdress, mToAdress, mLength, mNodes, mDuration, mDistance, mElevation, startGeo, stopGeo, tripIsFinnished);
-
-                    // Save trip
-                    //todo endre til viewmodel
-                    mRepository.tripInsert(trip);
+                    Trip.StartGeo startGeo = new Trip.StartGeo(mStartPointLat, mStartPointLong, mStartAltitude);
+                    Trip.StopGeo stopGeo = new Trip.StopGeo(mEndPointLat, mEndPointLong, mEndAltitude);
+                    double mEstimatedToughness = calculateToughness(mDistance, mStartAltitude, mEndAltitude);
 
                     Looper.prepare();
-                    Toast.makeText(context.getApplicationContext(), "Trip saved", Toast.LENGTH_LONG).show();
 
+                    if (mUser != null) {
+                        // Save trip
+                        Trip trip = new Trip(mUser.mUserinfoID, mFromAdress, mToAdress, mLength, mNodes, mDuration, mDistance, mElevation, startGeo, stopGeo, tripIsFinnished, mEstimatedToughness);
+                        mViewModel.insertTrip(trip);
+
+                        Toast.makeText(context.getApplicationContext(), "Trip saved", Toast.LENGTH_LONG).show();
+                        Intent intent = new Intent(context, RecordedTripsActivity.class);
+                        startActivity(intent);
+                    } else {
+                        Toast.makeText(context, "No user info, fail in db", Toast.LENGTH_SHORT).show();
+                    }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -238,4 +265,21 @@ public class MapWorks extends AppCompatActivity {
         }
     }
 
+    private double calculateToughness(double mDistance, double mStartAltitude, double mEndAltitude) {
+        double altitudePoints = 0;
+        double distancePoints = 0;
+
+        if (mStartAltitude > mEndAltitude) {
+            // Går nedover bakke, 2 poeng for hver meter differanse
+            altitudePoints = (mStartAltitude - mEndAltitude) * 1;
+        } else if (mStartAltitude < mEndAltitude) {
+            // Går oppover bakke, 2 poeng for hver meter differanse
+            altitudePoints = (mEndAltitude - mStartAltitude) * 3;
+        }
+
+        // Distanse i meter
+        distancePoints = mDistance * 1;
+
+        return altitudePoints + distancePoints;
+    }
 }

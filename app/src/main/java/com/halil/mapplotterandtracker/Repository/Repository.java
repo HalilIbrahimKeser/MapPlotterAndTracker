@@ -38,6 +38,11 @@ public class Repository {
         return user;
     }
 
+    public LiveData<List<UserInfo>> getUser1(int userinfoID) {
+        user = mDao.getUser(userinfoID);
+        return user;
+    }
+
     public void userInfoUpdate(String nameString, double etAgeInt, double etWeightInt ) {
         RoomDatabase.databaseWriteExecutor.execute(() -> {
             mDao.userInfoUpdate(nameString, etAgeInt, etWeightInt);

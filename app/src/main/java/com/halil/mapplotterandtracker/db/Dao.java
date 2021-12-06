@@ -54,9 +54,10 @@ public interface Dao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     void tripInsert(Trip trip);
 
-    @Query("SELECT * FROM trip_table WHERE isFinished == 1 ORDER BY mTripId")
+    @Query("SELECT * FROM trip_table WHERE mIsFinished == 1 ORDER BY mTripId")
     LiveData<List<Trip>> getFinnishedTrips();
-    @Query("SELECT * FROM trip_table WHERE isFinished == 0 ORDER BY mTripId")
+
+    @Query("SELECT * FROM trip_table WHERE mIsFinished == 0 ORDER BY mTripId")
     LiveData<List<Trip>> getNotFinnishedTrips();
 
 
