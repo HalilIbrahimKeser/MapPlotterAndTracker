@@ -16,6 +16,7 @@ public class ViewModel extends AndroidViewModel {
 
     private final Repository mRepository;
     public LiveData<List<Trip>> mAllTrips;
+    public LiveData<List<Trip>> mAllTripsAll;
     public LiveData<List<Locations>> mAllLocations;
     public LiveData<Trip> mCurrentTrip;
     public MutableLiveData<Trip> mCurentHiking;
@@ -36,6 +37,9 @@ public class ViewModel extends AndroidViewModel {
         mUser = mRepository.getUser(userinfoID);
         return mUser;
     }
+    public List<UserInfo> getAllUser() {
+        return mRepository.getAllUser();
+    }
 
     // Locations
     public LiveData<List<Locations>> getAllLocations() {
@@ -47,13 +51,25 @@ public class ViewModel extends AndroidViewModel {
         mRepository.locationInsert(location);
     }
 
+    public void insertLocations(List<Locations> locations) {
+        mRepository.insertLocations(locations);
+    }
+
     public void deleteAllLocations(List<Locations> locationsList) {
         mRepository.deleteAllLocations(locationsList);
+    }
+
+    public void updateLocations(List<Locations> locations) {
+        mRepository.updateLocations(locations);
     }
 
     //TRIP ------------------------------------------------------------
     public void insertTrip(Trip trip) {
         mRepository.tripInsert(trip);
+    }
+
+    public void updateTrip(Trip trip) {
+        mRepository.updateTrip(trip);
     }
 
     public MutableLiveData<Trip> getCurrentTrip() {
@@ -63,17 +79,13 @@ public class ViewModel extends AndroidViewModel {
         return mCurentHiking;
     }
 
-//    public LiveData<List<Trip>> getSingleTrip(int mTripID) {
-//        mTrip = mRepository.getSingleTrip(mTripID).getValue().get(0);
-//        return mRepository.getSingleTrip(mTripID);
-//    }
-
     public LiveData<List<Trip>> getAllTrips(Boolean finished) {
         mAllTrips = mRepository.getAllTrips(finished);
         return mAllTrips;
     }
+    public List<Trip> getAllTripsAll() {
+        return mRepository.getAllTripsAll();
+    }
 
-//    public LiveData<Trip> getTrip(int mTripId) {
-//        return mRepository.getTrip(mTripId);
-//    }
+
 }

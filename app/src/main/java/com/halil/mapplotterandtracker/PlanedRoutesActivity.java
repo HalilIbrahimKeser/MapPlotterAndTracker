@@ -75,6 +75,10 @@ public class PlanedRoutesActivity extends AppCompatActivity {
                     intent = new Intent(context, RecordedTripsActivity.class);
                     startActivity(intent);
                     return true;
+                case R.id.person:
+                    intent = new Intent(context, PersonActivity.class);
+                    startActivity(intent);
+                    return true;
                 case R.id.userSettings:
                     intent = new Intent(context, SettingsActivity.class);
                     startActivity(intent);

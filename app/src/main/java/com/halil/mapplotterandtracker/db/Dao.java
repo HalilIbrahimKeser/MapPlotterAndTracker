@@ -22,6 +22,9 @@ public interface Dao {
     @Delete
     void resetLocations(List<Locations> locationsList);
 
+    @Update
+    void updateLocations(List<Locations> locationsList);
+
     @Query("DELETE FROM location_table")
     void resetAllLocations();
 
@@ -31,8 +34,8 @@ public interface Dao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     void locationInsert(Locations location);
 
-//    @Query("SELECT * FROM location_table WHERE locTripID = :mTripID")
-//    LiveData<List<Locations>> getLocationPath(int mTripID);
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    void insertLocations(List<Locations> locationsList);
 
     // USER - - - - - - - - - - - - - - - - - - - - -  -
     @Insert(onConflict = OnConflictStrategy.IGNORE)
@@ -50,9 +53,22 @@ public interface Dao {
     @Query("SELECT * FROM userinfo_table WHERE userinfoID = :userinfoID")
     LiveData<List<UserInfo>> getUser(int userinfoID);
 
+    @Query("SELECT * FROM userinfo_table")
+    List<UserInfo> getAllUser();
+
+
     // TRIP - - - - - - - - - - - - - - - - - - - - -  -
+    @Query("DELETE FROM trip_table WHERE mIsFinished == 1")
+    void resetAllRecordedTrips();
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     void tripInsert(Trip trip);
+
+    @Update
+    void updateTrip(Trip trip);
+
+    @Query("SELECT * FROM trip_table")
+    List<Trip> getAllTripsAll();
 
     @Query("SELECT * FROM trip_table WHERE mIsFinished == 1 ORDER BY mTripId")
     LiveData<List<Trip>> getFinnishedTrips();

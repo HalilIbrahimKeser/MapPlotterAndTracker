@@ -38,6 +38,10 @@ public class Repository {
         return user;
     }
 
+    public List<UserInfo> getAllUser( ) {
+        return mDao.getAllUser();
+    }
+
     public LiveData<List<UserInfo>> getUser1(int userinfoID) {
         user = mDao.getUser(userinfoID);
         return user;
@@ -62,9 +66,21 @@ public class Repository {
     }
 
     /** LOCATION --------------------*/
+    public void updateLocations(List<Locations> locations) {
+        RoomDatabase.databaseWriteExecutor.execute(() -> {
+            mDao.updateLocations(locations);
+        });
+    }
+
     public void locationInsert(Locations location) {
         RoomDatabase.databaseWriteExecutor.execute(() -> {
             mDao.locationInsert(location);
+        });
+    }
+
+    public void insertLocations(List<Locations> locationsList) {
+        RoomDatabase.databaseWriteExecutor.execute(() -> {
+            mDao.insertLocations(locationsList);
         });
     }
 
@@ -84,11 +100,22 @@ public class Repository {
         });
     }
 
-
     /** TRIP --------------------*/
+    public void resetAllRecordedTrips() {
+        RoomDatabase.databaseWriteExecutor.execute(() -> {
+            mDao.resetAllRecordedTrips();
+        });
+    }
+
     public void tripInsert(Trip trip) {
         RoomDatabase.databaseWriteExecutor.execute(() -> {
             mDao.tripInsert(trip);
+        });
+    }
+
+    public void updateTrip(Trip trip) {
+        RoomDatabase.databaseWriteExecutor.execute(() -> {
+            mDao.updateTrip(trip);
         });
     }
 
@@ -99,6 +126,10 @@ public class Repository {
             mAllTrips = mDao.getNotFinnishedTrips();
         }
         return mAllTrips;
+    }
+
+    public List<Trip> getAllTripsAll() {
+        return mDao.getAllTripsAll();
     }
 
     public LiveData<Trip> getTrip(int mTripID) {

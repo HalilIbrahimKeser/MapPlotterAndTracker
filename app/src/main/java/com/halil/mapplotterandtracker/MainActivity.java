@@ -22,17 +22,20 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.res.ResourcesCompat;
+import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.halil.mapplotterandtracker.Entities.Locations;
 import com.halil.mapplotterandtracker.Entities.Trip;
+import com.halil.mapplotterandtracker.Entities.UserInfo;
 import com.halil.mapplotterandtracker.Repository.Repository;
 import com.halil.mapplotterandtracker.VievModel.ViewModel;
 import com.halil.mapplotterandtracker.databinding.ActivityMainBinding;
@@ -72,7 +75,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     public Context context;
     // ViewModel
     private ViewModel mViewModel;
-    Trip mCurentHiking;
+    Trip mCurrentHiking;
     // Repo
     private Repository mRepository;
     // Helper
@@ -110,7 +113,10 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     public Marker endMarker;
     boolean positionsSet = false;
     boolean trackingStartet = false;
+    boolean activateLoacationUpdates = true;
     public Trip trip;
+    List<Trip> tripFromIntent;
+    List<Trip> tripFromDb;
     int timer = 0;
 
     @SuppressLint("NonConstantResourceId")
@@ -150,6 +156,10 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
                     intent = new Intent(context, RecordedTripsActivity.class);
                     startActivity(intent);
                     return true;
+                case R.id.person:
+                    intent = new Intent(context, PersonActivity.class);
+                    startActivity(intent);
+                    return true;
                 case R.id.userSettings:
                     intent = new Intent(context, SettingsActivity.class);
                     startActivity(intent);
@@ -175,14 +185,15 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
             setTheTripFromIntentExtra();
         }
         // Init Map
-        initMap();
+        initMap(waypoints);
 
         // Testing / Deleting / Resetting all locations
-        // mRepository.deleteTrip(3); mRepository.deleteTrip(4); mRepository.deleteTrip(5);mRepository.deleteTrip(6);
+        // mRepository.deleteTrip(5); mRepository.deleteTrip(6)
+        // mRepository.resetAllRecordedTrips();
         // mRepository.resetAllLocations();
     }
 
-    public void initMap() {
+    public void initMap(ArrayList<GeoPoint> waypoints1) {
         locationManager = (LocationManager) getSystemService(context.LOCATION_SERVICE);
 
         mapViewOsm = binding.map;
@@ -215,20 +226,29 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
 
         // Set-up start and end points
-        waypoints = new ArrayList<>();
+        // If got waypoints from planned trips, then set it
+        if(waypoints1 != null) {
+            waypoints = waypoints1;
+        } else {
+            waypoints = new ArrayList<>();
+        }
 
         // Gangvei
         ((OSRMRoadManager) roadManager).setMean(OSRMRoadManager.MEAN_BY_FOOT);
 
         // Current point
+        double latitude;
+        double longitude;
+        LatLng currentPosition = null;
+        LocationHelper.Deg2UTM curUTM;
         if (location != null) {
             currentPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
+            mapController.setCenter(currentPoint);
+            latitude = location.getLatitude();
+            longitude = location.getLongitude();
+            currentPosition = new LatLng(latitude, longitude);
+            curUTM = new LocationHelper.Deg2UTM(currentPosition.latitude, currentPosition.longitude);
         }
-        mapController.setCenter(currentPoint);
-        double latitude = location.getLatitude();
-        double longitude = location.getLongitude();
-        LatLng currentPosition = new LatLng(latitude, longitude);
-        LocationHelper.Deg2UTM curUTM = new LocationHelper.Deg2UTM(currentPosition.latitude, currentPosition.longitude);
 
         // Initialize start marker and end marker
         startMarker = new Marker(mapViewOsm);
@@ -238,19 +258,19 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
 
     public void setTheTripFromIntentExtra() {
         //En intent er sendt fra annen aktivitet. Da tegnes denne ruten. Inten er enten fra Recorded eller Planned routes.
-        mCurentHiking = mViewModel.getCurrentTrip().getValue();
+        mCurrentHiking = mViewModel.getCurrentTrip().getValue();
 
         Intent intent = getIntent();
         Bundle args = intent.getBundleExtra("bundle");
-        List<Trip> trip = (ArrayList<Trip>) args.getSerializable("arraylist");
+        tripFromIntent = (ArrayList<Trip>) args.getSerializable("arraylist");
 
-        if (trip.size() == 0) {
+        if (tripFromIntent.size() == 0) {
             return;
         } else {
-            GeoPoint start = new GeoPoint(trip.get(0).startGeo.mStartPointLat, trip.get(0).startGeo.mStartPointLong);
-            GeoPoint end = new GeoPoint(trip.get(0).stopGeo.mEndPointLat, trip.get(0).stopGeo.mEndPointLong);
+            GeoPoint start = new GeoPoint(tripFromIntent.get(0).startGeo.mStartPointLat, tripFromIntent.get(0).startGeo.mStartPointLong);
+            GeoPoint end = new GeoPoint(tripFromIntent.get(0).stopGeo.mEndPointLat, tripFromIntent.get(0).stopGeo.mEndPointLong);
 
-            initMap();
+            initMap(waypoints);
 
             startPoint = start;
             waypoints.add(startPoint);
@@ -324,10 +344,14 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         currentPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
 
         if (accelerometerSensorChanged && trackingStartet && positionsSet) {
-            mapWorks.setPositionToCurrentLocation(context, currentPoint, currentMarker, mapController, mapViewOsm);
-            mapWorks.drawHikeTrackingline(context, mViewModel, mRepository, location, waypoints, true, true, roadManager, mapViewOsm, nodeMarker);
-            // Refresh the map!
-            mapViewOsm.invalidate();
+            if (activateLoacationUpdates) {
+                mapWorks.setPositionToCurrentLocation(context, currentPoint, currentMarker, mapController, mapViewOsm);
+                mapWorks.drawHikeTrackingline(context, mViewModel, mRepository, location, waypoints, true, true, roadManager, mapViewOsm, nodeMarker);
+
+                // Refresh the map!
+                mapViewOsm.invalidate();
+            }
+
         }
         // Reset boolean
         accelerometerSensorChanged = false;
@@ -366,10 +390,24 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
                 stopProgram();
                 return true;
             case R.id.menu_save:
-                if(locationsList.size() > 0) {
-                    mapWorks.saveTrip(true, mViewModel, context, mRepository, waypoints, road, roadManager);
+                //Save or update planed route
+                if (tripFromIntent != null) {
+                    // Trip is from the planned trips
+                    if (trackingStartet) {
+                        mapWorks.updateTrip(true, tripFromIntent.get(0), null, mViewModel, context, mRepository, waypoints, road, roadManager, locationsList);
+                        Toast.makeText(context, "Yay! finished hiking. Congrats!", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(context, "Nothing to update, start hiking", Toast.LENGTH_SHORT).show();
+                    }
                 } else {
-                    mapWorks.saveTrip(false, mViewModel, context, mRepository, waypoints, road, roadManager);
+                    // New trip
+                    if (trackingStartet) {
+                        Toast.makeText(context, "Yay! finished hiking. Congrats!", Toast.LENGTH_SHORT).show();
+                        mapWorks.saveTrip(true, null, trip, mViewModel, context, mRepository, waypoints, road, roadManager, locationsList);
+                    } else {
+                        Toast.makeText(context, "Tracking not started, saving trip on planned trips", Toast.LENGTH_SHORT).show();
+                        mapWorks.saveTrip(false, null, trip, mViewModel, context, mRepository, waypoints, road, roadManager, locationsList);
+                    }
                 }
                 return true;
             case R.id.menu_show_saved_routes:
@@ -395,12 +433,11 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
             if (!trackingStartet) {
                 // Start knapp er trykket
                 trackingStartet = true;
+                activateLoacationUpdates = true;
+
                 mapWorks.setPositionToCurrentLocation(context, currentPoint, currentMarker, mapController, mapViewOsm);
-                if (positionsSet) {
-                    mapWorks.drawHikeTrackingline(context, mViewModel, mRepository, location, waypoints, true, true, roadManager, mapViewOsm, nodeMarker);
-                } else {
-                    Toast.makeText(this, "Create a start and end point", Toast.LENGTH_SHORT).show();
-                }
+
+                mapWorks.drawHikeTrackingline(context, mViewModel, mRepository, location, waypoints, true, true, roadManager, mapViewOsm, nodeMarker);
             } else {
                 // Start knapp er trykket enda en gang
                 Toast.makeText(this, "Tracking already started. Start hiking! Good luck!", Toast.LENGTH_LONG).show();
@@ -419,26 +456,39 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
                         // Oppdater location list
                         locationsList.addAll(locations);
 
-                        // Slett alle locations i db. Vi er ferdig med de. Vi har tatt være på dataene i locationlist
-                        if (locationsList.size() != 0) {
-                            mViewModel.deleteAllLocations(locationsList);
-                        }
+                      // Delete those locations in list from db. They will be added later with right trip id
+//                        if (locationsList.size() != 0) {
+//                            mViewModel.deleteAllLocations(locationsList);
+//                        }
                     } else {
                         Toast.makeText(this, "No data got from saved locations.", Toast.LENGTH_LONG).show();
                     }
                 });
+
+                // Save the trip as finished
+                if (tripFromIntent != null) {
+                    Toast.makeText(this, "Updating your planned trip.", Toast.LENGTH_SHORT).show();
+                    mapWorks.updateTrip(true, tripFromIntent.get(0), null, mViewModel, context, mRepository, waypoints, road, roadManager, locationsList);
+                } else {
+                    Toast.makeText(this, "Saving your new trip.", Toast.LENGTH_SHORT).show();
+                    // Stop location updates
+                    activateLoacationUpdates = false;
+                    mapWorks.saveTrip(true, null, null, mViewModel, context, mRepository, waypoints, road, roadManager, locationsList);
+                }
+
             } else {
+                // Reset map and waypoints
+                if (waypoints.size() == 1) {
+                    waypoints.remove(startPoint);
+                    resetMap();
+
+                } else if (waypoints.size() == 2) {
+                    waypoints.remove(startPoint);
+                    waypoints.remove(endPoint);
+                    resetMap();
+                }
                 Toast.makeText(this, "Tracking not started. Stopped the program. No track to save",
                         Toast.LENGTH_SHORT).show();
-            }
-            if (waypoints.size() == 1) {
-                waypoints.remove(startPoint);
-                resetMap();
-
-            } else if (waypoints.size() == 2) {
-                waypoints.remove(startPoint);
-                waypoints.remove(endPoint);
-                resetMap();
             }
         } else {
             Toast.makeText(this, "Gps fail", Toast.LENGTH_SHORT).show();
@@ -446,14 +496,17 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     }
 
     public void resetMap() {
+        activateLoacationUpdates = true;
+
         // Remove all overlays
         mapViewOsm.getOverlays().clear();
 
         // Init map again
-        initMap();
+        initMap(waypoints);
 
         positionsSet = false;
         trackingStartet = false;
+        tripFromIntent = null;
     }
 
     private void doQuit(MenuItem item) {
